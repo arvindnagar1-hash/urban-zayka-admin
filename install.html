@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#16213E">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="UZ Admin">
+<title>Install Urban ज़ायका Admin App</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#1A1A2E;color:#fff;min-height:100vh}
+
+.hero{background:linear-gradient(135deg,#16213E 0%,#0F3460 100%);padding:48px 24px 36px;text-align:center;border-bottom:1px solid rgba(255,255,255,.08)}
+.app-icon{width:96px;height:96px;background:#F40009;border-radius:24px;display:inline-flex;align-items:center;justify-content:center;font-size:48px;margin-bottom:18px;box-shadow:0 8px 32px rgba(244,0,9,.5)}
+.hero h1{font-size:26px;font-weight:700;color:#fff;margin-bottom:6px}
+.hero p{font-size:14px;color:rgba(255,255,255,.6);line-height:1.6}
+.badge-row{display:flex;justify-content:center;gap:10px;margin-top:14px;flex-wrap:wrap}
+.badge{background:rgba(255,255,255,.1);color:rgba(255,255,255,.85);border-radius:20px;padding:5px 13px;font-size:12px;font-weight:500;border:1px solid rgba(255,255,255,.15)}
+
+.warning-box{background:rgba(244,0,9,.1);border:1px solid rgba(244,0,9,.3);border-radius:14px;padding:14px 16px;margin:20px;display:flex;align-items:flex-start;gap:10px}
+.warning-box p{font-size:13px;color:rgba(255,255,255,.8);line-height:1.6}
+
+.install-section{padding:24px 20px}
+.install-section h2{font-size:17px;font-weight:700;color:#fff;margin-bottom:18px;text-align:center}
+
+.platform-tabs{display:flex;background:rgba(255,255,255,.08);border-radius:12px;padding:4px;margin-bottom:24px;border:1px solid rgba(255,255,255,.1)}
+.ptab{flex:1;padding:9px;text-align:center;font-size:13px;font-weight:500;color:rgba(255,255,255,.5);border-radius:9px;cursor:pointer;transition:all .2s}
+.ptab.active{background:#F40009;color:#fff;box-shadow:0 2px 8px rgba(244,0,9,.4)}
+
+.steps{display:none}
+.steps.active{display:block}
+.step{display:flex;align-items:flex-start;gap:14px;padding:14px 0;border-bottom:1px solid rgba(255,255,255,.08)}
+.step:last-child{border-bottom:none}
+.step-num{width:36px;height:36px;background:#F40009;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;flex-shrink:0}
+.step-content h3{font-size:14px;font-weight:600;color:#fff;margin-bottom:4px}
+.step-content p{font-size:13px;color:rgba(255,255,255,.6);line-height:1.6}
+.step-content .highlight{background:rgba(244,0,9,.2);color:#F40009;border:1px solid rgba(244,0,9,.3);border-radius:6px;padding:2px 8px;font-weight:600;font-size:12px;display:inline-block;margin-top:4px}
+
+.open-btn{display:block;background:#F40009;color:#fff;text-align:center;border-radius:14px;padding:16px;font-size:16px;font-weight:700;text-decoration:none;margin:0 20px 12px;box-shadow:0 4px 20px rgba(244,0,9,.4)}
+.share-btn{display:block;background:rgba(255,255,255,.08);color:#fff;text-align:center;border-radius:14px;padding:13px;font-size:14px;font-weight:500;margin:0 20px 24px;cursor:pointer;border:1px solid rgba(255,255,255,.15);width:calc(100% - 40px);font-family:inherit}
+
+.features{background:rgba(255,255,255,.04);padding:28px 20px;border-top:1px solid rgba(255,255,255,.08)}
+.features h2{font-size:16px;font-weight:700;color:#fff;margin-bottom:16px;text-align:center}
+.feature-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.feature-card{background:rgba(255,255,255,.06);border-radius:12px;padding:14px;border:1px solid rgba(255,255,255,.08)}
+.feature-icon{font-size:26px;margin-bottom:8px}
+.feature-title{font-size:13px;font-weight:600;color:#fff;margin-bottom:3px}
+.feature-desc{font-size:11px;color:rgba(255,255,255,.5);line-height:1.5}
+
+.footer{background:#0F3460;padding:20px;text-align:center;border-top:1px solid rgba(255,255,255,.08)}
+.footer p{font-size:12px;color:rgba(255,255,255,.4);margin-bottom:8px}
+.footer a{color:#F40009;text-decoration:none;font-weight:500}
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="app-icon">⚙️</div>
+  <h1>Urban ज़ायका Admin</h1>
+  <p>Manage orders, menu & sales<br>directly from your phone!</p>
+  <div class="badge-row">
+    <div class="badge">🔒 Owner only</div>
+    <div class="badge">📱 Works like an app</div>
+    <div class="badge">🔔 Live order alerts</div>
+  </div>
+</div>
+
+<!-- WARNING -->
+<div class="warning-box">
+  <div style="font-size:20px;flex-shrink:0">⚠️</div>
+  <p><strong>Restaurant owners only.</strong> This app requires a password. Do not share this link publicly.</p>
+</div>
+
+<!-- INSTALL SECTION -->
+<div class="install-section">
+  <h2>📲 Install Admin App</h2>
+
+  <div class="platform-tabs">
+    <div class="ptab active" onclick="showPlatform('android')">🤖 Android</div>
+    <div class="ptab" onclick="showPlatform('ios')">🍎 iPhone</div>
+  </div>
+
+  <!-- ANDROID -->
+  <div class="steps active" id="steps-android">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <h3>Open in Chrome</h3>
+        <p>Tap the button below — make sure it opens in <strong>Chrome</strong> browser</p>
+        <span class="highlight">Chrome only on Android</span>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <h3>Tap "Add to Home Screen"</h3>
+        <p>A banner appears at the bottom — tap <strong>"Add Urban ज़ायका Admin"</strong></p>
+        <span class="highlight">Auto-appears in Chrome</span>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <h3>Login once & stay logged in</h3>
+        <p>Enter password → check <strong>"Keep me logged in"</strong> → done! Opens instantly next time.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- IOS -->
+  <div class="steps" id="steps-ios">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <h3>Open in Safari</h3>
+        <p>Tap the button below in <strong>Safari</strong> browser (not Chrome)</p>
+        <span class="highlight">Safari only on iPhone</span>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <h3>Tap the Share button ⬆️</h3>
+        <p>At the bottom of Safari, tap the <strong>Share icon</strong> (box with arrow)</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <h3>Add to Home Screen</h3>
+        <p>Scroll down → tap <strong>"Add to Home Screen"</strong> → tap <strong>Add</strong></p>
+        <span class="highlight">Scroll to find it</span>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-content">
+        <h3>Login & stay logged in ✅</h3>
+        <p>Enter password → check <strong>"Keep me logged in"</strong> → opens full screen next time!</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CTA -->
+<a href="https://admin.urbanzayka.in" class="open-btn" id="open-btn">⚙️ Open Admin App & Install</a>
+<button class="share-btn" onclick="copyLink()">🔗 Copy Admin Link</button>
+
+<!-- FEATURES -->
+<div class="features">
+  <h2>What you can do</h2>
+  <div class="feature-grid">
+    <div class="feature-card">
+      <div class="feature-icon">🔔</div>
+      <div class="feature-title">Live Order Alerts</div>
+      <div class="feature-desc">Ring sound + notification when new order arrives</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📋</div>
+      <div class="feature-title">Manage Orders</div>
+      <div class="feature-desc">Confirm → Ready → Delivered status tracking</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🍽️</div>
+      <div class="feature-title">Edit Menu</div>
+      <div class="feature-desc">Add items, change prices, mark sold out</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📊</div>
+      <div class="feature-title">Sales Dashboard</div>
+      <div class="feature-desc">Today's orders, revenue & delivery stats</div>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+  <p>Customer ordering app →</p>
+  <a href="https://urbanzayka.in">urbanzayka.in</a>
+</div>
+
+<script>
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+if (isIOS) showPlatform('ios');
+
+function showPlatform(p) {
+  document.querySelectorAll('.ptab').forEach((t,i) => t.classList.toggle('active', (i===0&&p==='android')||(i===1&&p==='ios')));
+  document.getElementById('steps-android').classList.toggle('active', p==='android');
+  document.getElementById('steps-ios').classList.toggle('active', p==='ios');
+}
+
+function copyLink() {
+  navigator.clipboard.writeText('https://admin.urbanzayka.in/install').then(() => {
+    const btn = document.querySelector('.share-btn');
+    btn.textContent = '✅ Link Copied!';
+    setTimeout(() => btn.textContent = '🔗 Copy Admin Link', 2000);
+  });
+}
+
+// Android install prompt
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  const btn = document.getElementById('open-btn');
+  btn.textContent = '📲 Install Admin App Now';
+  btn.onclick = async (ev) => {
+    ev.preventDefault();
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') btn.textContent = '✅ Admin App Installed!';
+    deferredPrompt = null;
+  };
+});
+</script>
+</body>
+</html>
