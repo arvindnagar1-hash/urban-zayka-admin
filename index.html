@@ -307,7 +307,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js';
 import { getFirestore, collection, onSnapshot, doc, updateDoc, deleteDoc, addDoc, setDoc, query, orderBy, serverTimestamp, getDocs } from 'https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js';
-import { getMessaging, getToken, onMessage } from 'https://www.gstatic.com/firebasejs/11.0.0/firebase-messaging.js';
 
 const firebaseConfig = {
   apiKey: "AIzaSyBkgTWZwKcXy5BiCVpppltZWVTW7gIPDbE",
@@ -322,26 +321,17 @@ const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
 let messaging = null;
 
-// Initialize FCM messaging
+// Initialize FCM safely
 try {
+  const { getMessaging, getToken, onMessage } = await import('https://www.gstatic.com/firebasejs/11.0.0/firebase-messaging.js');
   messaging = getMessaging(app);
-  // Register service worker
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/firebase-messaging-sw.js')
-      .then(reg => console.log('✅ Service Worker registered:', reg.scope))
-      .catch(err => console.log('SW registration failed:', err));
+      .then(reg => console.log('SW registered'))
+      .catch(err => console.log('SW failed:', err));
   }
-  // Handle foreground messages
   onMessage(messaging, (payload) => {
-    console.log('Foreground message:', payload);
     playRing();
-    const newest = allOrders[0];
-    if (newest) {
-      const alert = document.getElementById('new-order-alert');
-      document.getElementById('alert-desc').textContent = `#${newest.orderId} · ${newest.customerName} · ₹${newest.total}`;
-      alert.classList.add('show');
-      setTimeout(() => alert.classList.remove('show'), 8000);
-    }
   });
 } catch(e) {
   console.log('FCM not available:', e);
@@ -471,18 +461,17 @@ window.requestNotifPermission = async () => {
 async function setupFCM() {
   if (!messaging) return;
   try {
-    // VAPID key from Firebase Console → Project Settings → Cloud Messaging → Web Push certificates
+    const { getToken } = await import('https://www.gstatic.com/firebasejs/11.0.0/firebase-messaging.js');
     const VAPID_KEY = 'BHxTq1AvMoAgP43J_ILyHhq-bbqvElECxdT3AMTGwuj_W-9jfmfWfTFGO1vodLZivZ9K4htFx1yYSDHG29MawKI';
-    const token = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: await navigator.serviceWorker.ready });
+    const swReg = await navigator.serviceWorker.ready;
+    const token = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: swReg });
     if (token) {
-      console.log('✅ FCM Token:', token);
-      // Save token to Firestore for sending push later
       await setDoc(doc(db, 'fcm_tokens', 'admin'), { token, updatedAt: serverTimestamp() });
       showToast('✅ Push notifications set up!');
     }
   } catch(e) {
     console.log('FCM token error:', e);
-    showToast('⚠️ Using basic notifications (app must be open)');
+    showToast('⚠️ Basic notifications only (app must be open)');
   }
 }
 
@@ -589,7 +578,6 @@ window.printOrder = async (id) => {
 
   showToast('🖨️ Sending to printer...');
 
-  // Build 80mm thermal receipt content
   const line  = '--------------------------------';
   const dline = '================================';
   const pad   = (left, right, width=32) => {
@@ -618,9 +606,8 @@ window.printOrder = async (id) => {
 
   (order.items || []).forEach(item => {
     const nameQty = `${item.name} x${item.qty}`;
-    const price = `Rs.${item.total}`;
-    // Wrap long names
-    if (nameQty.length > 24) {
+    const price   = `Rs.${item.total}`;
+    if (nameQty.length + price.length >= 31) {
       receipt += nameQty.substring(0, 32) + '\n';
       receipt += pad('', price) + '\n';
     } else {
@@ -638,41 +625,52 @@ window.printOrder = async (id) => {
   receipt += dline + '\n';
   receipt += pad('TOTAL', `Rs.${order.total || 0}`) + '\n';
   receipt += dline + '\n';
-  receipt += '\n';
-  receipt += '   Thank you for ordering!\n';
+  receipt += '\n   Thank you for ordering!\n';
   receipt += '     urbanzayka.in\n';
-  receipt += '\n\n\n'; // Feed paper
+  receipt += '\n\n\n';
 
-  // Base64 encode receipt
-  const encoded = btoa(unescape(encodeURIComponent(receipt)));
+  // Encode to base64
+  const bytes = new TextEncoder().encode(receipt);
+  const binStr = Array.from(bytes, b => String.fromCodePoint(b)).join('');
+  const encoded = btoa(binStr);
+
+  const payload = JSON.stringify({
+    printerId: PRINTNODE_PRINTER_ID,
+    title: `Order #${order.orderId || id.slice(-6)}`,
+    contentType: 'raw_base64',
+    content: encoded,
+    source: 'Urban Zayka Admin'
+  });
 
   try {
     const response = await fetch('https://api.printnode.com/printjobs', {
       method: 'POST',
       headers: {
         'Authorization': 'Basic ' + btoa(PRINTNODE_API_KEY + ':'),
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
       },
-      body: JSON.stringify({
-        printerId: PRINTNODE_PRINTER_ID,
-        title: `Order #${order.orderId || id.slice(-6)}`,
-        contentType: 'raw_base64',
-        content: encoded,
-        source: 'Urban Zayka Admin'
-      })
+      body: payload
     });
 
     if (response.ok) {
       const jobId = await response.json();
-      showToast(`✅ Printed! Job #${jobId}`);
+      showToast(`✅ Printing! Job #${jobId}`);
     } else {
-      const err = await response.text();
-      console.error('PrintNode error:', err);
-      showToast('❌ Print failed — check printer is on');
+      const errText = await response.text();
+      console.error('PrintNode error:', response.status, errText);
+      showToast(`❌ Print failed (${response.status}) — is printer on?`);
     }
   } catch(e) {
-    console.error('Print error:', e);
-    showToast('❌ Print failed — check internet connection');
+    console.error('Print fetch error:', e);
+    // CORS fallback — open PrintNode web print
+    showToast('⚠️ Opening print fallback...');
+    const printWin = window.open('', '_blank');
+    if (printWin) {
+      printWin.document.write(`<pre style="font-family:monospace;font-size:12px">${receipt}</pre>`);
+      printWin.document.close();
+      printWin.print();
+    }
   }
 };
 
