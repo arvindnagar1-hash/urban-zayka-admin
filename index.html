@@ -518,6 +518,13 @@ function listenOrders() {
       alert.classList.add('show');
       setTimeout(() => alert.classList.remove('show'), 8000);
     }
+
+    // On first load - default to 'new' tab
+    if (isFirstLoad) {
+      currentFilter = 'new';
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.filter-btn')[1]?.classList.add('active'); // 🔴 New button
+    }
     isFirstLoad = false;
 
     // Update badge
@@ -564,7 +571,7 @@ function renderOrders() {
         ${status==='confirmed'?`<button class="action-btn btn-ready" onclick="updateStatus('${o.id}','ready')">🟡 Ready</button>`:''}
         ${status==='ready'?`<button class="action-btn btn-deliver" onclick="updateStatus('${o.id}','delivered')">🔵 Delivered</button>`:''}
         <button class="action-btn btn-wa" onclick="openWA('${o.customerPhone||''}','${o.orderId||o.id.slice(-6)}')">📲 WA</button>
-        <button class="action-btn btn-delete" onclick="confirmDelete('order','${o.id}','#${o.orderId||o.id.slice(-6)} · ${o.customerName||'Customer'}')">🗑️</button>
+        ${status==='delivered'?`<button class="action-btn btn-delete" onclick="confirmDelete('order','${o.id}','#${o.orderId||o.id.slice(-6)} · ${o.customerName||'Customer'}')">🗑️</button>`:''}
       </div>
     </div>`;
   }).join('');
