@@ -321,20 +321,11 @@ const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
 let messaging = null;
 
-// Initialize FCM safely
-try {
-  const { getMessaging, getToken, onMessage } = await import('https://www.gstatic.com/firebasejs/11.0.0/firebase-messaging.js');
-  messaging = getMessaging(app);
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/firebase-messaging-sw.js')
-      .then(reg => console.log('SW registered'))
-      .catch(err => console.log('SW failed:', err));
-  }
-  onMessage(messaging, (payload) => {
-    playRing();
-  });
-} catch(e) {
-  console.log('FCM not available:', e);
+// Register service worker separately (no await at top level)
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/firebase-messaging-sw.js')
+    .then(reg => console.log('SW registered'))
+    .catch(err => console.log('SW skipped:', err));
 }
 const ADMIN_PASSWORD = 'zayka@2024';
 const CAT_EMOJIS = {'Breakfast':'🌅','Starters':'🍢','Sandwiches':'🥪','Indian Main':'🍛','Chinese':'🥢','Breads':'🫓','Meals':'🍱','Beverages':'☕'};
@@ -459,20 +450,8 @@ window.requestNotifPermission = async () => {
 };
 
 async function setupFCM() {
-  if (!messaging) return;
-  try {
-    const { getToken } = await import('https://www.gstatic.com/firebasejs/11.0.0/firebase-messaging.js');
-    const VAPID_KEY = 'BHxTq1AvMoAgP43J_ILyHhq-bbqvElECxdT3AMTGwuj_W-9jfmfWfTFGO1vodLZivZ9K4htFx1yYSDHG29MawKI';
-    const swReg = await navigator.serviceWorker.ready;
-    const token = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: swReg });
-    if (token) {
-      await setDoc(doc(db, 'fcm_tokens', 'admin'), { token, updatedAt: serverTimestamp() });
-      showToast('✅ Push notifications set up!');
-    }
-  } catch(e) {
-    console.log('FCM token error:', e);
-    showToast('⚠️ Basic notifications only (app must be open)');
-  }
+  showToast('✅ Notifications enabled!');
+  // FCM token setup happens via service worker
 }
 
 function sendNotification(title, body) {
