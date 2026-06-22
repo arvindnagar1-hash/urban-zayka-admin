@@ -95,6 +95,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .btn-deliver{background:#E3F2FD;color:#1565C0}
 .btn-wa{background:#E8F5E9;color:#25D366}
 .btn-delete{background:#FFEBEE;color:#C62828;flex:0!important;padding:9px 12px}
+.btn-print{background:#E3F2FD;color:#1565C0;flex:0!important;padding:9px 12px}
 .empty-state{text-align:center;padding:50px 20px;color:#bbb}
 .empty-icon{font-size:52px;margin-bottom:12px}
 
@@ -571,18 +572,114 @@ function renderOrders() {
         ${status==='confirmed'?`<button class="action-btn btn-ready" onclick="updateStatus('${o.id}','ready')">🟡 Ready</button>`:''}
         ${status==='ready'?`<button class="action-btn btn-deliver" onclick="updateStatus('${o.id}','delivered')">🔵 Delivered</button>`:''}
         <button class="action-btn btn-wa" onclick="openWA('${o.customerPhone||''}','${o.orderId||o.id.slice(-6)}')">📲 WA</button>
+        <button class="action-btn btn-print" onclick="printOrder('${o.id}')">🖨️</button>
         ${status==='delivered'?`<button class="action-btn btn-delete" onclick="confirmDelete('order','${o.id}','#${o.orderId||o.id.slice(-6)} · ${o.customerName||'Customer'}')">🗑️</button>`:''}
       </div>
     </div>`;
   }).join('');
 }
 
+// ── PRINTNODE PRINTING ────────────────────────────
+const PRINTNODE_API_KEY = 'DyQsAq9AOczxV7Rz3LuMdOIIsOts8X7o4_8NpEZ7r7M';
+const PRINTNODE_PRINTER_ID = 75568733;
+
+window.printOrder = async (id) => {
+  const order = allOrders.find(o => o.id === id);
+  if (!order) return;
+
+  showToast('🖨️ Sending to printer...');
+
+  // Build 80mm thermal receipt content
+  const line  = '--------------------------------';
+  const dline = '================================';
+  const pad   = (left, right, width=32) => {
+    const space = width - left.length - right.length;
+    return left + ' '.repeat(Math.max(1, space)) + right;
+  };
+
+  const t = order.createdAt?.toDate ? order.createdAt.toDate() : new Date();
+  const dateStr = t.toLocaleDateString('en-IN', {day:'numeric', month:'short', year:'numeric'});
+  const timeStr = t.toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit'});
+
+  let receipt = '';
+  receipt += '      Urban Zayka\n';
+  receipt += '   Met City, Haryana\n';
+  receipt += '   Ph: 8860609555\n';
+  receipt += dline + '\n';
+  receipt += `Order: #${order.orderId || id.slice(-6).toUpperCase()}\n`;
+  receipt += `Date : ${dateStr} ${timeStr}\n`;
+  receipt += `Type : ${order.orderType === 'delivery' ? 'Delivery' : 'Pickup'}\n`;
+  receipt += `Name : ${order.customerName || 'Customer'}\n`;
+  if (order.customerPhone) receipt += `Phone: ${order.customerPhone}\n`;
+  if (order.orderType === 'delivery' && order.address) receipt += `Addr : ${order.address}\n`;
+  receipt += line + '\n';
+  receipt += pad('ITEM', 'AMT') + '\n';
+  receipt += line + '\n';
+
+  (order.items || []).forEach(item => {
+    const nameQty = `${item.name} x${item.qty}`;
+    const price = `Rs.${item.total}`;
+    // Wrap long names
+    if (nameQty.length > 24) {
+      receipt += nameQty.substring(0, 32) + '\n';
+      receipt += pad('', price) + '\n';
+    } else {
+      receipt += pad(nameQty, price) + '\n';
+    }
+  });
+
+  receipt += line + '\n';
+  receipt += pad('Subtotal', `Rs.${order.subtotal || 0}`) + '\n';
+  if (order.deliveryCharge > 0) {
+    receipt += pad('Delivery', `Rs.${order.deliveryCharge}`) + '\n';
+  } else if (order.orderType === 'delivery') {
+    receipt += pad('Delivery', 'FREE') + '\n';
+  }
+  receipt += dline + '\n';
+  receipt += pad('TOTAL', `Rs.${order.total || 0}`) + '\n';
+  receipt += dline + '\n';
+  receipt += '\n';
+  receipt += '   Thank you for ordering!\n';
+  receipt += '     urbanzayka.in\n';
+  receipt += '\n\n\n'; // Feed paper
+
+  // Base64 encode receipt
+  const encoded = btoa(unescape(encodeURIComponent(receipt)));
+
+  try {
+    const response = await fetch('https://api.printnode.com/printjobs', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Basic ' + btoa(PRINTNODE_API_KEY + ':'),
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        printerId: PRINTNODE_PRINTER_ID,
+        title: `Order #${order.orderId || id.slice(-6)}`,
+        contentType: 'raw_base64',
+        content: encoded,
+        source: 'Urban Zayka Admin'
+      })
+    });
+
+    if (response.ok) {
+      const jobId = await response.json();
+      showToast(`✅ Printed! Job #${jobId}`);
+    } else {
+      const err = await response.text();
+      console.error('PrintNode error:', err);
+      showToast('❌ Print failed — check printer is on');
+    }
+  } catch(e) {
+    console.error('Print error:', e);
+    showToast('❌ Print failed — check internet connection');
+  }
+};
+
 window.updateStatus = async (id, status) => {
   await updateDoc(doc(db,'orders',id),{status});
   showToast(status==='confirmed'?'✅ Order confirmed!':(status==='ready'?'🟡 Order ready!':(status==='delivered'?'🔵 Delivered!':'')));
 };
-
-window.openWA = (phone, orderId) => {
   if (!phone) { showToast('❌ No phone number'); return; }
   window.open(`https://wa.me/91${phone}?text=${encodeURIComponent(`Hi! Update on your order #${orderId} from Urban ज़ायका 🍽️`)}`, '_blank');
 };
