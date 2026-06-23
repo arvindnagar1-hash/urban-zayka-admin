@@ -279,7 +279,29 @@ if(sessionStorage.getItem('uz_admin')!=='1') location.href='/';
       <input type="checkbox" id="f-best" style="width:16px;height:16px;accent-color:#F40009;"/>
       <span>Mark as Bestseller</span>
     </label>
-    <div style="height:12px;"></div>
+
+    <div style="height:14px;"></div>
+    <label class="flabel">Item Photo</label>
+    <div id="imgUploadArea" onclick="document.getElementById('f-img').click()"
+      style="border:2px dashed #e0e0e0;border-radius:12px;padding:16px;text-align:center;cursor:pointer;margin-bottom:12px;transition:border-color .2s;background:#fafafa;min-height:90px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;">
+      <div id="imgPreviewWrap" style="display:none;width:100%;">
+        <img id="imgPreview" style="width:100%;max-height:160px;object-fit:cover;border-radius:8px;display:block;"/>
+        <p style="font-size:11px;color:#888;margin-top:6px;" id="imgPreviewName"></p>
+      </div>
+      <div id="imgPlaceholder">
+        <div style="font-size:28px;">📷</div>
+        <p style="font-size:12px;color:#888;margin-top:4px;">Tap to upload photo</p>
+        <p style="font-size:11px;color:#bbb;">JPG, PNG — max 2MB</p>
+      </div>
+      <input type="file" id="f-img" accept="image/*" style="display:none" onchange="previewImage(event)"/>
+    </div>
+    <div id="imgUploadProgress" style="display:none;margin-bottom:12px;">
+      <div style="background:#e0e0e0;border-radius:6px;height:6px;overflow:hidden;">
+        <div id="imgProgFill" style="background:#F40009;height:100%;border-radius:6px;width:0%;transition:width .3s;"></div>
+      </div>
+      <p id="imgProgTxt" style="font-size:11px;color:#888;margin-top:4px;">Uploading image...</p>
+    </div>
+
     <button class="save-btn" onclick="saveItem()" id="saveBtn">Save Item</button>
     <button class="del-btn-modal" id="delItemBtn" onclick="deleteItem()" style="display:none">🗑️ Delete Item</button>
   </div>
@@ -575,7 +597,11 @@ function renderMenuItems(){
   filtered.forEach(item=>{
     const row=document.createElement('div'); row.className='menu-item-row';
     const soldLabel=item.soldOut?'<span style="font-size:10px;background:#fce4ec;color:#c62828;padding:2px 7px;border-radius:10px;font-weight:600;margin-left:6px;">SOLD OUT</span>':'';
+    const imgThumb = item.imageUrl
+      ? `<img src="${item.imageUrl}" style="width:48px;height:48px;border-radius:8px;object-fit:cover;flex-shrink:0;" />`
+      : `<div style="width:48px;height:48px;border-radius:8px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">🍽️</div>`;
     row.innerHTML=`
+      ${imgThumb}
       <div class="mi-info">
         <div class="mi-name">${item.name}${soldLabel}</div>
         <div class="mi-meta">${item.category} · ₹${item.price} · ${item.veg||item.isVeg?'🟢 Veg':'🔴 Non-Veg'}</div>
@@ -589,6 +615,87 @@ function renderMenuItems(){
   });
 }
 
+// ── CLOUDINARY IMAGE UPLOAD ──────────────────────────────────────────────────
+const CLOUDINARY_CLOUD = 'dgmm5oop3';
+const CLOUDINARY_PRESET = 'urban_zayka_menu';
+let currentImgFile = null;
+let currentImgUrl = null;
+
+function previewImage(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  if(file.size > 5*1024*1024){ showToast('❌ Image too large. Max 5MB.'); return; }
+  currentImgFile = file;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    document.getElementById('imgPreview').src = ev.target.result;
+    document.getElementById('imgPreviewName').textContent = file.name;
+    document.getElementById('imgPreviewWrap').style.display = 'block';
+    document.getElementById('imgPlaceholder').style.display = 'none';
+    document.getElementById('imgUploadArea').style.borderColor = '#F40009';
+  };
+  reader.readAsDataURL(file);
+}
+
+function resetImageUI(existingUrl){
+  currentImgFile = null;
+  currentImgUrl = existingUrl || null;
+  document.getElementById('f-img').value = '';
+  document.getElementById('imgUploadProgress').style.display = 'none';
+  document.getElementById('imgProgFill').style.width = '0%';
+  document.getElementById('imgUploadArea').style.borderColor = '#e0e0e0';
+  if(existingUrl){
+    document.getElementById('imgPreview').src = existingUrl;
+    document.getElementById('imgPreviewName').textContent = 'Current photo';
+    document.getElementById('imgPreviewWrap').style.display = 'block';
+    document.getElementById('imgPlaceholder').style.display = 'none';
+  } else {
+    document.getElementById('imgPreviewWrap').style.display = 'none';
+    document.getElementById('imgPlaceholder').style.display = 'flex';
+    document.getElementById('imgPlaceholder').style.flexDirection = 'column';
+  }
+}
+
+async function uploadImage(){
+  if(!currentImgFile) return currentImgUrl;
+
+  return new Promise((resolve, reject) => {
+    const formData = new FormData();
+    formData.append('file', currentImgFile);
+    formData.append('upload_preset', CLOUDINARY_PRESET);
+    formData.append('folder', 'urban_zayka_menu');
+
+    const xhr = new XMLHttpRequest();
+    const url = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`;
+
+    xhr.open('POST', url);
+
+    xhr.upload.onprogress = e => {
+      if(e.lengthComputable){
+        const pct = Math.round(e.loaded/e.total*100);
+        document.getElementById('imgUploadProgress').style.display = 'block';
+        document.getElementById('imgProgFill').style.width = pct+'%';
+        document.getElementById('imgProgTxt').textContent = `Uploading photo... ${pct}%`;
+      }
+    };
+
+    xhr.onload = () => {
+      if(xhr.status === 200){
+        const res = JSON.parse(xhr.responseText);
+        // Use f_auto,q_auto for auto optimization — faster loading on customer app
+        const optimizedUrl = res.secure_url.replace('/upload/', '/upload/f_auto,q_auto,w_200,h_200,c_fill/');
+        document.getElementById('imgProgTxt').textContent = '✅ Photo uploaded!';
+        document.getElementById('imgProgFill').style.width = '100%';
+        resolve(optimizedUrl);
+      } else {
+        reject(new Error('Upload failed: '+xhr.status));
+      }
+    };
+    xhr.onerror = () => reject(new Error('Network error'));
+    xhr.send(formData);
+  });
+}
+
 function openAddItem(){
   editingItemId=null;
   document.getElementById('modalTitle').textContent='Add Menu Item';
@@ -599,6 +706,7 @@ function openAddItem(){
   document.getElementById('f-cat').value='';
   document.getElementById('f-best').checked=false;
   document.getElementById('delItemBtn').style.display='none';
+  resetImageUI(null);
   setVeg(true);
   document.getElementById('itemModal').classList.add('show');
 }
@@ -614,6 +722,7 @@ function openEditItem(id){
   document.getElementById('f-cat').value=item.category||'';
   document.getElementById('f-best').checked=!!(item.bestseller||item.best);
   document.getElementById('delItemBtn').style.display='block';
+  resetImageUI(item.imageUrl||null);
   setVeg(!!(item.veg||item.isVeg));
   document.getElementById('itemModal').classList.add('show');
 }
@@ -634,24 +743,35 @@ async function saveItem(){
   if(!price||price<1){ showToast('Enter valid price'); return; }
   if(!cat){ showToast('Select category'); return; }
 
-  const data={
-    name,
-    nameHi:document.getElementById('f-nameHi').value.trim()||'',
-    description:document.getElementById('f-desc').value.trim()||'',
-    price,
-    category:cat,
-    veg:isVeg,
-    isVeg,
-    bestseller:document.getElementById('f-best').checked,
-    best:document.getElementById('f-best').checked,
-    soldOut:false,
-    available:true,
-    updatedAt:new Date()
-  };
-
   const btn=document.getElementById('saveBtn');
   btn.textContent='Saving...'; btn.disabled=true;
+
   try{
+    let imageUrl = currentImgUrl || '';
+
+    // If new image selected, upload it first
+    if(currentImgFile){
+      btn.textContent='Uploading photo...';
+      imageUrl = await uploadImage();
+    }
+
+    const data={
+      name,
+      nameHi:document.getElementById('f-nameHi').value.trim()||'',
+      description:document.getElementById('f-desc').value.trim()||'',
+      price,
+      category:cat,
+      veg:isVeg,
+      isVeg,
+      bestseller:document.getElementById('f-best').checked,
+      best:document.getElementById('f-best').checked,
+      imageUrl,
+      soldOut:false,
+      available:true,
+      updatedAt:new Date()
+    };
+
+    btn.textContent='Saving...';
     if(editingItemId){
       await window._updateMenuItem(editingItemId, data);
       showToast('✅ Item updated!');
@@ -661,7 +781,7 @@ async function saveItem(){
       showToast('✅ Item added!');
     }
     closeModal();
-  }catch(e){ showToast('Error saving item'); }
+  }catch(e){ console.error(e); showToast('Error saving item: '+e.message); }
   btn.textContent='Save Item'; btn.disabled=false;
 }
 
