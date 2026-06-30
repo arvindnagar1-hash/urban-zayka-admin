@@ -140,6 +140,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .cat-pill.active{background:var(--red);color:#fff;border-color:var(--red)}
 .menu-cat-title{font-size:11px;font-weight:600;color:var(--red);margin:14px 0 7px;text-transform:uppercase;border-left:3px solid var(--red);padding-left:8px}
 .menu-item-row{display:flex;align-items:center;background:#fff;border-radius:12px;padding:10px 12px;margin-bottom:7px;border:1px solid #eee;gap:10px}
+.menu-item-row.has-corp{border-color:#A5D6A7;border-width:1.5px}
 .menu-item-thumb{width:48px;height:48px;border-radius:10px;object-fit:cover;flex-shrink:0;background:#f0f0f0;display:flex;align-items:center;justify-content:center;font-size:22px;overflow:hidden}
 .menu-item-thumb img{width:100%;height:100%;object-fit:cover;border-radius:10px}
 .menu-item-left{flex:1;min-width:0}
@@ -147,6 +148,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .menu-item-name.crossed{text-decoration:line-through;color:#bbb}
 .menu-item-cat{font-size:10px;color:#bbb;margin-top:1px}
 .menu-item-price{font-size:13px;font-weight:700;color:var(--red);margin-top:2px}
+.corp-pill{display:inline-flex;align-items:center;gap:3px;background:#E8F5E9;color:#2E7D32;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;margin-top:3px}
 .menu-item-controls{display:flex;align-items:center;gap:5px;flex-shrink:0}
 .soldout-toggle{border:1px solid #ddd;border-radius:8px;padding:5px 8px;font-size:10px;cursor:pointer;font-family:inherit;background:#f8f8f8;color:#888;font-weight:500}
 .soldout-toggle.soldout{background:#FFEBEE;color:#C62828;border-color:#FFCDD2}
@@ -170,6 +172,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .veg-opt{flex:1;border:1.5px solid #ddd;border-radius:10px;padding:8px;text-align:center;cursor:pointer;font-size:13px;font-weight:600;transition:all .15s}
 .veg-opt.on.veg{border-color:#2E7D32;background:#E8F5E9;color:#2E7D32}
 .veg-opt.on.nonveg{border-color:#C62828;background:#FFEBEE;color:#C62828}
+
+/* CORPORATE DISCOUNT TOGGLE */
+.corp-toggle-row{display:flex;align-items:center;justify-content:space-between;background:#F1F8F6;border:1.5px solid #C8E6C9;border-radius:12px;padding:12px 14px;margin-top:14px}
+.corp-toggle-label{font-size:13px;font-weight:600;color:#2E7D32;display:flex;align-items:center;gap:6px}
+.corp-toggle-sub{font-size:11px;color:#558B2F;margin-top:2px;font-weight:400}
+.switch{position:relative;width:44px;height:24px;flex-shrink:0;cursor:pointer}
+.switch input{opacity:0;width:0;height:0}
+.switch-track{position:absolute;inset:0;background:#ccc;border-radius:24px;transition:.2s}
+.switch-track::before{content:'';position:absolute;width:18px;height:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
+.switch input:checked + .switch-track{background:#2E7D32}
+.switch input:checked + .switch-track::before{transform:translateX(20px)}
+.corp-amount-row{display:none;margin-top:10px}
+.corp-amount-row.show{display:block}
 
 /* IMAGE UPLOAD */
 .img-upload-area{border:2px dashed #e0e0e0;border-radius:12px;padding:14px;text-align:center;cursor:pointer;margin-top:6px;background:#fafafa;min-height:80px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;transition:border-color .2s}
@@ -361,6 +376,22 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
       <span>Mark as Bestseller</span>
     </label>
 
+    <!-- CORPORATE DISCOUNT TOGGLE -->
+    <div class="corp-toggle-row">
+      <div>
+        <div class="corp-toggle-label">💼 Corporate Discount</div>
+        <div class="corp-toggle-sub">Show ribbon banner + discount on delivery orders</div>
+      </div>
+      <label class="switch">
+        <input type="checkbox" id="m-corp" onchange="toggleCorpAmountRow()"/>
+        <span class="switch-track"></span>
+      </label>
+    </div>
+    <div class="corp-amount-row" id="corp-amount-row">
+      <label>Discount Amount (₹) — Delivery only</label>
+      <input type="number" id="m-corp-amount" placeholder="e.g. 40" min="0" value="40"/>
+    </div>
+
     <label>Item Photo</label>
     <div class="img-upload-area" id="img-upload-area" onclick="document.getElementById('m-img').click()">
       <div id="img-preview-wrap" style="display:none;width:100%">
@@ -533,6 +564,7 @@ function renderOrders() {
     const t = o.createdAt ? o.createdAt.toDate() : new Date();
     const status = o.status || 'new';
     const delFree = o.deliveryCharge===0 && o.orderType==='delivery';
+    const corpDisc = o.corporateDiscount > 0 ? ` <span style="color:#2E7D32;font-size:11px">💼 −₹${o.corporateDiscount} corp</span>` : '';
     return `<div class="order-card ${status}">
       <div class="order-top">
         <div>
@@ -542,9 +574,9 @@ function renderOrders() {
         <span class="order-badge badge-${status}">${statusLabel[status]||status}</span>
       </div>
       <div class="order-customer">👤 ${o.customerName||'Customer'}${o.customerPhone?' &nbsp;📞 '+o.customerPhone:''}</div>
-      <div class="order-detail">${o.orderType==='delivery'?`🛵 Delivery${o.distance?' · '+o.distance+' km':''}${o.address?' · '+o.address:''}`:'🚶 Pickup'}</div>
+      <div class="order-detail">${o.orderType==='delivery'?`🛵 Delivery${o.distance?' · '+o.distance+' km':''}${o.address?' · '+o.address:''}`:'🚶 Pickup'}${o.company?` · 💼 ${o.company} (${o.empId||'-'})`:''}</div>
       <div class="order-items">${(o.items||[]).map(i=>`• ${i.name} × ${i.qty} = ₹${i.total}`).join('<br>')}</div>
-      <div class="order-total">Total: ₹${o.total||0}${delFree?' <span style="color:#2E7D32;font-size:11px">🎉 FREE Delivery!</span>':''}</div>
+      <div class="order-total">Total: ₹${o.total||0}${delFree?' <span style="color:#2E7D32;font-size:11px">🎉 FREE Delivery!</span>':''}${corpDisc}</div>
       <div class="order-actions">
         ${status==='new'?`<button class="action-btn btn-confirm" onclick="updateStatus('${o.id}','confirmed')">✅ Confirm</button>`:''}
         ${status==='confirmed'?`<button class="action-btn btn-ready" onclick="updateStatus('${o.id}','ready')">🟡 Ready</button>`:''}
@@ -590,6 +622,7 @@ function printOrder(id) {
   txt += `Name : ${o.customerName||'Customer'}\n`;
   if (o.customerPhone) txt += `Phone: ${o.customerPhone}\n`;
   if (o.orderType==='delivery' && o.address) txt += `Addr : ${o.address}\n`;
+  if (o.company) txt += `Co.  : ${o.company} (${o.empId||'-'})\n`;
   txt += line+'\n'+pad('ITEM','AMT')+'\n'+line+'\n';
   (o.items||[]).forEach(item => {
     const nq = `${item.name} x${item.qty}`;
@@ -600,6 +633,7 @@ function printOrder(id) {
   txt += pad('Subtotal',`Rs.${o.subtotal||0}`)+'\n';
   if (o.deliveryCharge>0) txt += pad('Delivery',`Rs.${o.deliveryCharge}`)+'\n';
   else if (o.orderType==='delivery') txt += pad('Delivery','FREE')+'\n';
+  if (o.corporateDiscount>0) txt += pad('Corp Discount',`-Rs.${o.corporateDiscount}`)+'\n';
   txt += dline+'\n'+pad('TOTAL',`Rs.${o.total||0}`)+'\n'+dline+'\n';
   txt += '\x1B\x61\x01'; // center
   txt += '\n   Thank you for ordering!\n     urbanzayka.in\n';
@@ -686,12 +720,16 @@ function renderMenuAdmin() {
       const thumb = item.imageUrl
         ? `<div class="menu-item-thumb"><img src="${item.imageUrl}" alt="${item.name}" onerror="this.parentNode.innerHTML='${(item.emoji||'🍽️')}'"/></div>`
         : `<div class="menu-item-thumb">${item.emoji||'🍽️'}</div>`;
-      html += `<div class="menu-item-row">
+      const corpPill = item.isCorporate
+        ? `<span class="corp-pill">💼 −₹${item.corporateDiscountAmount||40}</span>`
+        : '';
+      html += `<div class="menu-item-row ${item.isCorporate?'has-corp':''}">
         ${thumb}
         <div class="menu-item-left">
           <div class="menu-item-name ${item.soldOut?'crossed':''}">${item.name}</div>
           <div class="menu-item-cat">${CAT_LABELS[item.category||item.cat]||item.category||item.cat}</div>
           <div class="menu-item-price">₹${item.price}</div>
+          ${corpPill}
         </div>
         <div class="menu-item-controls">
           <button class="soldout-toggle ${item.soldOut?'soldout':''}" onclick="toggleSoldOut('${item.id}',${!item.soldOut})">${item.soldOut?'Sold Out':'In Stock'}</button>
@@ -717,6 +755,11 @@ function setVeg(v) {
   isVeg = v;
   document.getElementById('opt-veg').classList.toggle('on', v);
   document.getElementById('opt-nonveg').classList.toggle('on', !v);
+}
+
+function toggleCorpAmountRow() {
+  const checked = document.getElementById('m-corp').checked;
+  document.getElementById('corp-amount-row').classList.toggle('show', checked);
 }
 
 function previewImage(e) {
@@ -792,6 +835,9 @@ function openAddModal() {
   document.getElementById('m-emoji').value = '🍽️';
   document.getElementById('m-desc').value = '';
   document.getElementById('m-best').checked = false;
+  document.getElementById('m-corp').checked = false;
+  document.getElementById('m-corp-amount').value = '40';
+  toggleCorpAmountRow();
   document.getElementById('modal-delete-btn').style.display = 'none';
   resetImageUI(null);
   setVeg(true);
@@ -810,6 +856,9 @@ function openEditModal(id) {
   document.getElementById('m-emoji').value  = item.emoji||'🍽️';
   document.getElementById('m-desc').value   = item.description||item.desc||'';
   document.getElementById('m-best').checked = !!(item.bestseller||item.best);
+  document.getElementById('m-corp').checked = !!item.isCorporate;
+  document.getElementById('m-corp-amount').value = item.corporateDiscountAmount || 40;
+  toggleCorpAmountRow();
   document.getElementById('modal-delete-btn').style.display = 'block';
   resetImageUI(item.imageUrl||null);
   setVeg(!!(item.veg||item.isVeg));
@@ -824,6 +873,10 @@ async function saveItem() {
   const cat   = document.getElementById('m-cat').value;
   if(!name)        { showToast('❌ Enter item name'); return; }
   if(!price||price<0) { showToast('❌ Enter valid price'); return; }
+
+  const isCorp = document.getElementById('m-corp').checked;
+  const corpAmount = isCorp ? (parseInt(document.getElementById('m-corp-amount').value) || 0) : 0;
+  if (isCorp && corpAmount <= 0) { showToast('❌ Enter a valid corporate discount amount'); return; }
 
   const btn = document.getElementById('modal-save-btn');
   btn.disabled = true; btn.textContent = 'Saving...';
@@ -848,6 +901,8 @@ async function saveItem() {
     isVeg:      isVeg,
     bestseller: document.getElementById('m-best').checked,
     best:       document.getElementById('m-best').checked,
+    isCorporate: isCorp,
+    corporateDiscountAmount: corpAmount,
     imageUrl,
     soldOut:    false,
     available:  true,
