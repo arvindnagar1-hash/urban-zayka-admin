@@ -1,22 +1,21 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0"/>
-<meta name="theme-color" content="#16213E"/>
-<meta name="apple-mobile-web-app-capable" content="yes"/>
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<meta name="apple-mobile-web-app-title" content="UZ Admin"/>
-<link rel="manifest" href="/manifest.json"/>
-<link rel="apple-touch-icon" href="/apple-touch-icon.png"/>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#16213E">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="UZ Admin">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <title>Urban ज़ायका — Admin</title>
 
-<!-- Firebase compat SDK -->
+<!-- Firebase via CDN (compat SDK) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
-
 <script>
+// Login available immediately — before Firebase loads
 const ADMIN_PASSWORD = 'zayka@2024';
 function doLogin() {
   const pwd = document.getElementById('pwd-input').value;
@@ -28,6 +27,7 @@ function doLogin() {
     document.getElementById('login-page').style.display = 'none';
     document.getElementById('dashboard').style.display = 'flex';
     initApp();
+    if (Notification.permission === 'granted') setTimeout(initFCM, 2000);
   } else {
     document.getElementById('login-err').style.display = 'block';
     document.getElementById('pwd-input').value = '';
@@ -35,10 +35,14 @@ function doLogin() {
   }
 }
 document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('pwd-input').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+  document.getElementById('pwd-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') doLogin();
+  });
+  // Auto-login
   if (localStorage.getItem('uzAdmin') || sessionStorage.getItem('uzAdmin')) {
     document.getElementById('login-page').style.display = 'none';
     document.getElementById('dashboard').style.display = 'flex';
+    // initApp called after Firebase loads below
   }
 });
 </script>
@@ -48,7 +52,6 @@ document.addEventListener('DOMContentLoaded', () => {
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f5f5f5;color:#1a1a1a;overscroll-behavior:none}
 :root{--red:#F40009;--navy:#1A1A2E;--navy2:#16213E}
 
-/* ── LOGIN ── */
 .login-wrap{min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;background:var(--navy);padding:20px}
 .login-box{background:#fff;border-radius:20px;padding:32px 28px;width:100%;max-width:360px;box-shadow:0 20px 60px rgba(0,0,0,.4)}
 .login-logo{text-align:center;margin-bottom:28px}
@@ -64,7 +67,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .remember-row input{width:18px;height:18px;accent-color:var(--red);cursor:pointer}
 .remember-row label{font-size:13px;color:#555}
 
-/* ── DASHBOARD ── */
 .dashboard{display:none;min-height:100vh;min-height:100dvh;flex-direction:column;background:#f5f5f5}
 .dash-header{background:var(--navy2);padding:14px 16px 10px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
 .header-left h1{font-size:15px;font-weight:700;color:#fff}
@@ -75,7 +77,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .hdr-btn{background:rgba(255,255,255,.1);border:none;color:#fff;border-radius:8px;padding:6px 10px;font-size:16px;cursor:pointer}
 .logout-btn{background:rgba(255,255,255,.1);border:none;color:#fff;border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;font-family:inherit}
 
-/* ── BOTTOM NAV ── */
 .bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #eee;display:flex;z-index:100;padding-bottom:max(8px,env(safe-area-inset-bottom))}
 .nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 4px 6px;cursor:pointer;color:#aaa;border:none;background:none;font-family:inherit;position:relative}
 .nav-item.active{color:var(--red)}
@@ -83,11 +84,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .nav-label{font-size:10px;font-weight:500}
 .nav-badge{position:absolute;top:6px;right:calc(50% - 16px);background:var(--red);color:#fff;border-radius:10px;padding:1px 5px;font-size:9px;font-weight:700;display:none}
 
-/* ── PANES ── */
 .pane{display:none;padding-bottom:80px}
 .pane.active{display:block}
 
-/* ── STATS ── */
 .stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:14px}
 .stat-card{background:#fff;border-radius:14px;padding:16px;border:1px solid #eee;position:relative;overflow:hidden}
 .stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--red)}
@@ -95,7 +94,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .stat-val{font-size:26px;font-weight:700;color:var(--red);margin-bottom:3px}
 .stat-label{font-size:11px;color:#888;font-weight:500}
 
-/* ── ORDERS ── */
 .orders-wrap{padding:12px}
 .order-filter{display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
 .order-filter::-webkit-scrollbar{display:none}
@@ -129,7 +127,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .empty-state{text-align:center;padding:50px 20px;color:#bbb}
 .empty-icon{font-size:52px;margin-bottom:12px}
 
-/* ── MENU ── */
 .menu-wrap{padding:12px}
 .menu-top-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
 .menu-top-bar h3{font-size:15px;font-weight:700;color:var(--navy)}
@@ -139,62 +136,31 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .cat-pill{white-space:nowrap;border:1px solid #ddd;background:#fff;color:#666;border-radius:20px;padding:5px 13px;font-size:12px;cursor:pointer;font-family:inherit;flex-shrink:0}
 .cat-pill.active{background:var(--red);color:#fff;border-color:var(--red)}
 .menu-cat-title{font-size:11px;font-weight:600;color:var(--red);margin:14px 0 7px;text-transform:uppercase;border-left:3px solid var(--red);padding-left:8px}
-.menu-item-row{display:flex;align-items:center;background:#fff;border-radius:12px;padding:10px 12px;margin-bottom:7px;border:1px solid #eee;gap:10px}
-.menu-item-row.has-corp{border-color:#A5D6A7;border-width:1.5px}
-.menu-item-thumb{width:48px;height:48px;border-radius:10px;object-fit:cover;flex-shrink:0;background:#f0f0f0;display:flex;align-items:center;justify-content:center;font-size:22px;overflow:hidden}
-.menu-item-thumb img{width:100%;height:100%;object-fit:cover;border-radius:10px}
+.menu-item-row{display:flex;align-items:center;background:#fff;border-radius:12px;padding:12px;margin-bottom:7px;border:1px solid #eee;gap:10px}
+.menu-item-emoji{font-size:24px;flex-shrink:0;width:36px;text-align:center}
 .menu-item-left{flex:1;min-width:0}
 .menu-item-name{font-size:13px;font-weight:500;color:#1a1a1a}
 .menu-item-name.crossed{text-decoration:line-through;color:#bbb}
 .menu-item-cat{font-size:10px;color:#bbb;margin-top:1px}
 .menu-item-price{font-size:13px;font-weight:700;color:var(--red);margin-top:2px}
-.corp-pill{display:inline-flex;align-items:center;gap:3px;background:#E8F5E9;color:#2E7D32;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;margin-top:3px}
 .menu-item-controls{display:flex;align-items:center;gap:5px;flex-shrink:0}
 .soldout-toggle{border:1px solid #ddd;border-radius:8px;padding:5px 8px;font-size:10px;cursor:pointer;font-family:inherit;background:#f8f8f8;color:#888;font-weight:500}
 .soldout-toggle.soldout{background:#FFEBEE;color:#C62828;border-color:#FFCDD2}
 .edit-btn{background:#EEF2FF;color:#3730a3;border:none;border-radius:8px;padding:6px 9px;font-size:12px;cursor:pointer;font-family:inherit}
 .delete-menu-btn{background:#FFEBEE;color:#C62828;border:none;border-radius:8px;padding:6px 9px;font-size:12px;cursor:pointer;font-family:inherit}
 
-/* ── MODAL ── */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;display:none;align-items:flex-end;justify-content:center}
 .modal-overlay.show{display:flex}
 .modal{background:#fff;border-radius:20px 20px 0 0;padding:24px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;padding-bottom:max(24px,env(safe-area-inset-bottom))}
 .modal-handle{width:40px;height:4px;background:#e0e0e0;border-radius:2px;margin:0 auto 18px}
 .modal h3{font-size:16px;font-weight:700;color:var(--navy);margin-bottom:16px}
 .modal label{font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px;margin-top:14px}
-.modal input,.modal select,.modal textarea{width:100%;border:1.5px solid #e0e0e0;border-radius:12px;padding:12px 13px;font-size:15px;font-family:inherit;outline:none;background:#fff;resize:none}
-.modal input:focus,.modal select:focus,.modal textarea:focus{border-color:var(--red)}
+.modal input,.modal select{width:100%;border:1.5px solid #e0e0e0;border-radius:12px;padding:12px 13px;font-size:15px;font-family:inherit;outline:none;background:#fff}
+.modal input:focus,.modal select:focus{border-color:var(--red)}
 .modal-btns{display:flex;gap:8px;margin-top:20px}
 .modal-save{flex:1;background:var(--red);color:#fff;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit}
 .modal-cancel{background:#f5f5f5;color:#666;border:none;border-radius:12px;padding:14px 18px;font-size:15px;cursor:pointer;font-family:inherit}
-.modal-delete{background:#FFEBEE;color:#C62828;border:none;border-radius:12px;padding:14px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;margin-top:8px;width:100%}
-.veg-row{display:flex;gap:8px;margin-top:6px}
-.veg-opt{flex:1;border:1.5px solid #ddd;border-radius:10px;padding:8px;text-align:center;cursor:pointer;font-size:13px;font-weight:600;transition:all .15s}
-.veg-opt.on.veg{border-color:#2E7D32;background:#E8F5E9;color:#2E7D32}
-.veg-opt.on.nonveg{border-color:#C62828;background:#FFEBEE;color:#C62828}
 
-/* CORPORATE DISCOUNT TOGGLE */
-.corp-toggle-row{display:flex;align-items:center;justify-content:space-between;background:#F1F8F6;border:1.5px solid #C8E6C9;border-radius:12px;padding:12px 14px;margin-top:14px}
-.corp-toggle-label{font-size:13px;font-weight:600;color:#2E7D32;display:flex;align-items:center;gap:6px}
-.corp-toggle-sub{font-size:11px;color:#558B2F;margin-top:2px;font-weight:400}
-.switch{position:relative;width:44px;height:24px;flex-shrink:0;cursor:pointer}
-.switch input{opacity:0;width:0;height:0}
-.switch-track{position:absolute;inset:0;background:#ccc;border-radius:24px;transition:.2s}
-.switch-track::before{content:'';position:absolute;width:18px;height:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
-.switch input:checked + .switch-track{background:#2E7D32}
-.switch input:checked + .switch-track::before{transform:translateX(20px)}
-.corp-amount-row{display:none;margin-top:10px}
-.corp-amount-row.show{display:block}
-
-/* IMAGE UPLOAD */
-.img-upload-area{border:2px dashed #e0e0e0;border-radius:12px;padding:14px;text-align:center;cursor:pointer;margin-top:6px;background:#fafafa;min-height:80px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;transition:border-color .2s}
-.img-upload-area.has-img{border-color:var(--red)}
-.img-preview{width:100%;max-height:140px;object-fit:cover;border-radius:8px;display:block}
-.img-progress{background:#e0e0e0;border-radius:4px;height:5px;overflow:hidden;margin-top:8px;display:none}
-.img-progress-fill{background:var(--red);height:100%;border-radius:4px;width:0%;transition:width .3s}
-.img-progress-txt{font-size:11px;color:#888;margin-top:4px}
-
-/* ── CONFIRM DIALOG ── */
 .confirm-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:300;display:none;align-items:center;justify-content:center;padding:20px}
 .confirm-overlay.show{display:flex}
 .confirm-box{background:#fff;border-radius:20px;padding:28px 24px;width:100%;max-width:320px;text-align:center}
@@ -205,24 +171,21 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .confirm-cancel{flex:1;background:#f5f5f5;color:#555;border:none;border-radius:12px;padding:13px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}
 .confirm-ok{flex:1;background:#C62828;color:#fff;border:none;border-radius:12px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit}
 
-/* ── NEW ORDER ALERT ── */
+.toast{position:fixed;top:max(70px,env(safe-area-inset-top) + 70px);left:50%;transform:translateX(-50%);background:#1a1a1a;color:#fff;border-radius:12px;padding:11px 18px;font-size:13px;font-weight:500;z-index:9999;display:none;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+.toast.show{display:block;animation:fadeIn .3s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateX(-50%) translateY(-10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+
 .new-order-alert{position:fixed;top:max(70px,env(safe-area-inset-top) + 70px);left:12px;right:12px;background:var(--red);color:#fff;border-radius:14px;padding:14px 16px;z-index:9998;display:none;box-shadow:0 8px 24px rgba(244,0,9,.4);cursor:pointer}
 .new-order-alert.show{display:flex;align-items:center;gap:12px;animation:slideDown .4s ease}
 @keyframes slideDown{from{transform:translateY(-80px);opacity:0}to{transform:translateY(0);opacity:1}}
 .alert-icon{font-size:28px;flex-shrink:0}
 .alert-text h4{font-size:14px;font-weight:700}
 .alert-text p{font-size:12px;opacity:.9;margin-top:2px}
-
-/* ── TOAST ── */
-.toast{position:fixed;top:max(70px,env(safe-area-inset-top) + 70px);left:50%;transform:translateX(-50%);background:#1a1a1a;color:#fff;border-radius:12px;padding:11px 18px;font-size:13px;font-weight:500;z-index:9999;display:none;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.25)}
-.toast.show{display:block;animation:fadeIn .3s ease}
-@keyframes fadeIn{from{opacity:0;transform:translateX(-50%) translateY(-10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
 </style>
 </head>
 <body>
 
 <div class="toast" id="toast"></div>
-
 <div class="new-order-alert" id="new-order-alert" onclick="goToOrders()">
   <div class="alert-icon">🔔</div>
   <div class="alert-text">
@@ -243,7 +206,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
   </div>
 </div>
 
-<!-- ── LOGIN ── -->
+<!-- LOGIN -->
 <div class="login-wrap" id="login-page">
   <div class="login-box">
     <div class="login-logo">
@@ -253,16 +216,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
     </div>
     <div class="login-err" id="login-err">❌ Incorrect password</div>
     <label class="form-label">Admin Password</label>
-    <input type="password" id="pwd-input" class="form-input" placeholder="Enter password"/>
+    <input type="password" id="pwd-input" class="form-input" placeholder="Enter password">
     <div class="remember-row">
-      <input type="checkbox" id="remember-me" checked/>
+      <input type="checkbox" id="remember-me" checked>
       <label for="remember-me">Keep me logged in</label>
     </div>
     <button class="login-btn" onclick="doLogin()">Login →</button>
   </div>
 </div>
 
-<!-- ── DASHBOARD ── -->
+<!-- DASHBOARD -->
 <div class="dashboard" id="dashboard">
   <div class="dash-header">
     <div class="header-left">
@@ -271,12 +234,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
     </div>
     <div class="header-right">
       <button class="hdr-btn" onclick="playRing()" title="Test sound">🔊</button>
-      <button class="hdr-btn" onclick="requestNotif()" title="Enable notifications">🔔</button>
+      <button class="hdr-btn" onclick="requestNotif()" title="Notifications">🔔</button>
       <button class="logout-btn" onclick="doLogout()">Logout</button>
     </div>
   </div>
 
-  <!-- ORDERS PANE -->
   <div class="pane active" id="pane-orders">
     <div class="orders-wrap">
       <div class="order-filter">
@@ -290,7 +252,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
     </div>
   </div>
 
-  <!-- STATS PANE -->
   <div class="pane" id="pane-stats">
     <div class="stats-grid">
       <div class="stat-card"><div class="stat-icon">📦</div><div class="stat-val" id="s-today">0</div><div class="stat-label">Orders Today</div></div>
@@ -302,7 +263,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
     </div>
   </div>
 
-  <!-- MENU PANE -->
   <div class="pane" id="pane-menu">
     <div class="menu-wrap">
       <div class="menu-top-bar">
@@ -314,7 +274,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
     </div>
   </div>
 
-  <!-- BOTTOM NAV -->
   <div class="bottom-nav">
     <button class="nav-item active" id="nav-orders" onclick="showPane('orders')">
       <div class="nav-icon">📋</div>
@@ -332,110 +291,51 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
   </div>
 </div>
 
-<!-- ── MENU ITEM MODAL ── -->
+<!-- MENU MODAL -->
 <div class="modal-overlay" id="item-modal">
   <div class="modal">
     <div class="modal-handle"></div>
     <h3 id="modal-title">Add New Item</h3>
-
-    <label>Item Name (English) *</label>
-    <input type="text" id="m-name" placeholder="e.g. Paneer Tikka"/>
-
-    <label>Item Name (Hindi)</label>
-    <input type="text" id="m-nameHi" placeholder="e.g. पनीर टिक्का"/>
-
-    <label>Category *</label>
+    <label>Item Name</label>
+    <input type="text" id="m-name" placeholder="e.g. Paneer Tikka">
+    <label>Category</label>
     <select id="m-cat">
-      <option value="breakfast">🌅 Breakfast</option>
-      <option value="starters">🍢 Starters</option>
-      <option value="sandwiches">🥪 Sandwiches</option>
-      <option value="indian">🍛 Indian Main</option>
-      <option value="chinese">🥢 Chinese</option>
-      <option value="breads">🫓 Breads</option>
-      <option value="meals">🍱 Meals</option>
-      <option value="beverages">☕ Beverages</option>
+      <option value="Breakfast">🌅 Breakfast</option>
+      <option value="Starters">🍢 Starters</option>
+      <option value="Sandwiches">🥪 Sandwiches</option>
+      <option value="Indian Main">🍛 Indian Main</option>
+      <option value="Chinese">🥢 Chinese</option>
+      <option value="Breads">🫓 Breads</option>
+      <option value="Meals">🍱 Meals</option>
+      <option value="Beverages">☕ Beverages</option>
     </select>
-
-    <label>Price (₹) *</label>
-    <input type="number" id="m-price" placeholder="e.g. 250" min="0"/>
-
+    <label>Price (₹)</label>
+    <input type="number" id="m-price" placeholder="e.g. 250" min="0">
     <label>Emoji Icon</label>
-    <input type="text" id="m-emoji" placeholder="e.g. 🧀" maxlength="2"/>
-
-    <label>Description</label>
-    <textarea id="m-desc" rows="2" placeholder="Short description of the dish"></textarea>
-
-    <label>Type</label>
-    <div class="veg-row">
-      <div class="veg-opt veg on" id="opt-veg" onclick="setVeg(true)">🟢 Veg</div>
-      <div class="veg-opt nonveg" id="opt-nonveg" onclick="setVeg(false)">🔴 Non-Veg</div>
-    </div>
-
-    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-      <input type="checkbox" id="m-best" style="width:16px;height:16px;accent-color:var(--red);"/>
-      <span>Mark as Bestseller</span>
-    </label>
-
-    <!-- CORPORATE DISCOUNT TOGGLE -->
-    <div class="corp-toggle-row">
-      <div>
-        <div class="corp-toggle-label">💼 Corporate Discount</div>
-        <div class="corp-toggle-sub">Show ribbon banner + discount on delivery orders</div>
-      </div>
-      <label class="switch">
-        <input type="checkbox" id="m-corp" onchange="toggleCorpAmountRow()"/>
-        <span class="switch-track"></span>
-      </label>
-    </div>
-    <div class="corp-amount-row" id="corp-amount-row">
-      <label>Discount Amount (₹) — Delivery only</label>
-      <input type="number" id="m-corp-amount" placeholder="e.g. 40" min="0" value="40"/>
-    </div>
-
-    <label>Item Photo</label>
-    <div class="img-upload-area" id="img-upload-area" onclick="document.getElementById('m-img').click()">
-      <div id="img-preview-wrap" style="display:none;width:100%">
-        <img id="img-preview" class="img-preview"/>
-        <p style="font-size:11px;color:#888;margin-top:6px" id="img-preview-name"></p>
-      </div>
-      <div id="img-placeholder">
-        <div style="font-size:28px">📷</div>
-        <p style="font-size:12px;color:#888;margin-top:4px">Tap to upload photo</p>
-        <p style="font-size:11px;color:#bbb">JPG/PNG · max 5MB</p>
-      </div>
-      <input type="file" id="m-img" accept="image/*" style="display:none" onchange="previewImage(event)"/>
-    </div>
-    <div class="img-progress" id="img-progress">
-      <div class="img-progress-fill" id="img-progress-fill"></div>
-    </div>
-    <p class="img-progress-txt" id="img-progress-txt"></p>
-
+    <input type="text" id="m-emoji" placeholder="e.g. 🧀" maxlength="2">
+    <label>Description (optional)</label>
+    <input type="text" id="m-desc" placeholder="e.g. Tandoor grilled paneer">
     <div class="modal-btns">
       <button class="modal-cancel" onclick="closeModal()">Cancel</button>
-      <button class="modal-save" id="modal-save-btn" onclick="saveItem()">Save Item</button>
+      <button class="modal-save" onclick="saveItem()">Save Item</button>
     </div>
-    <button class="modal-delete" id="modal-delete-btn" onclick="deleteMenuItemFromModal()" style="display:none">🗑️ Delete Item</button>
   </div>
 </div>
 
 <script>
-// ── CONFIG ──────────────────────────────────────────────────────────────────
-const PRINTNODE_API_KEY   = 'DyQsAq9AOczxV7Rz3LuMdOIIsOts8X7o4_8NpEZ7r7M';
+const PRINTNODE_API_KEY = 'DyQsAq9AOczxV7Rz3LuMdOIIsOts8X7o4_8NpEZ7r7M';
 const PRINTNODE_PRINTER_ID = 75568733;
-const CLOUDINARY_CLOUD    = 'dgmm5oop3';
-const CLOUDINARY_PRESET   = 'urban_zayka_menu';
-const CAT_EMOJIS = {breakfast:'🌅',starters:'🍢',sandwiches:'🥪',indian:'🍛',chinese:'🥢',breads:'🫓',meals:'🍱',beverages:'☕'};
-const CAT_LABELS = {breakfast:'Breakfast',starters:'Starters',sandwiches:'Sandwiches',indian:'Indian Main',chinese:'Chinese',breads:'Breads',meals:'Meals',beverages:'Beverages'};
+const CAT_EMOJIS = {'Breakfast':'🌅','Starters':'🍢','Sandwiches':'🥪','Indian Main':'🍛','Chinese':'🥢','Breads':'🫓','Meals':'🍱','Beverages':'☕'};
 const isPaneer = n => /paneer/i.test(n);
 
-// ── FIREBASE ─────────────────────────────────────────────────────────────────
+// ── FIREBASE INIT ──
 const firebaseConfig = {
-  apiKey:"AIzaSyBkgTWZwKcXy5BiCVpppltZWVTW7gIPDbE",
-  authDomain:"urban-zayka.firebaseapp.com",
-  projectId:"urban-zayka",
-  storageBucket:"urban-zayka.firebasestorage.app",
-  messagingSenderId:"849575139822",
-  appId:"1:849575139822:web:01e6d124f8d78267b196ff"
+  apiKey: "AIzaSyBkgTWZwKcXy5BiCVpppltZWVTW7gIPDbE",
+  authDomain: "urban-zayka.firebaseapp.com",
+  projectId: "urban-zayka",
+  storageBucket: "urban-zayka.firebasestorage.app",
+  messagingSenderId: "849575139822",
+  appId: "1:849575139822:web:01e6d124f8d78267b196ff"
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
@@ -447,11 +347,13 @@ function initApp() {
   initMenu();
 }
 
+// Auto-login after Firebase ready
 if (localStorage.getItem('uzAdmin') || sessionStorage.getItem('uzAdmin')) {
   initApp();
+  if (Notification.permission === 'granted') setTimeout(initFCM, 2000);
 }
 
-// ── AUDIO ────────────────────────────────────────────────────────────────────
+// ── AUDIO ──
 let audioCtx = null;
 function unlockAudio() {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -476,17 +378,17 @@ function playRing() {
     play(ctx.currentTime);
     play(ctx.currentTime+.8);
     play(ctx.currentTime+1.6);
-  } catch(e) {}
+  } catch(e) { console.log('Audio:', e); }
 }
 
-// ── AUTH ─────────────────────────────────────────────────────────────────────
+// ── AUTH ──
 function doLogout() {
   localStorage.removeItem('uzAdmin');
   sessionStorage.removeItem('uzAdmin');
   location.reload();
 }
 
-// ── NAVIGATION ───────────────────────────────────────────────────────────────
+// ── NAVIGATION ──
 function showPane(pane) {
   document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -494,28 +396,67 @@ function showPane(pane) {
   document.getElementById('nav-'+pane).classList.add('active');
   if (pane === 'stats') updateStats();
 }
+
 function goToOrders() {
   showPane('orders');
-  filterOrders('new', document.querySelector('.filter-btn.active') || document.querySelectorAll('.filter-btn')[1]);
   document.getElementById('new-order-alert').classList.remove('show');
 }
 
-// ── NOTIFICATIONS ─────────────────────────────────────────────────────────────
-function requestNotif() {
-  if (!('Notification' in window)) { showToast('❌ Not supported'); return; }
-  if (Notification.permission === 'granted') { showToast('✅ Already enabled!'); return; }
-  Notification.requestPermission().then(r => {
-    if (r === 'granted') showToast('✅ Notifications enabled!');
-    else showToast('❌ Please allow in settings');
-  });
-}
-function sendNotif(title, body) {
-  if (Notification.permission === 'granted') {
-    new Notification(title, {body, icon:'/icon-192.png', badge:'/icon-192.png', vibrate:[200,100,200], requireInteraction:true});
+// ── NOTIFICATIONS + FCM ──
+const VAPID_KEY = 'BHxTq1AvMoAgP43J_ILyHhq-bbqvElECxdT3AMTGwuj_W-9jfmfWfTFGO1vodLZivZ9K4htFx1yYSDHG29MawKI';
+let fcmMessaging = null;
+
+async function initFCM() {
+  try {
+    if (!('serviceWorker' in navigator)) return;
+    const swReg = await navigator.serviceWorker.ready;
+    fcmMessaging = firebase.messaging();
+    const token = await fcmMessaging.getToken({ vapidKey: VAPID_KEY, serviceWorkerRegistration: swReg });
+    if (token) {
+      console.log('✅ FCM Token:', token.slice(0,20)+'...');
+      localStorage.setItem('fcmToken', token);
+    }
+    fcmMessaging.onMessage((payload) => {
+      playRing();
+      sendNotif(
+        payload.notification?.title || '🔔 New Order!',
+        payload.notification?.body  || 'New order received at Urban Zayka'
+      );
+    });
+  } catch(e) {
+    console.warn('FCM init failed:', e.message);
   }
 }
 
-// ── ORDERS ───────────────────────────────────────────────────────────────────
+async function requestNotif() {
+  if (!('Notification' in window)) { showToast('❌ Not supported on this browser'); return; }
+  if (Notification.permission === 'granted') {
+    showToast('✅ Already enabled! Re-registering...');
+    await initFCM();
+    return;
+  }
+  const result = await Notification.requestPermission();
+  if (result === 'granted') {
+    showToast('✅ Notifications enabled!');
+    await initFCM();
+  } else {
+    showToast('❌ Please allow notifications in browser settings');
+  }
+}
+
+function sendNotif(title, body) {
+  if (Notification.permission === 'granted') {
+    new Notification(title, {
+      body,
+      icon:  '/icon-192.png',
+      badge: '/icon-192.png',
+      vibrate: [200, 100, 200, 100, 200],
+      requireInteraction: true
+    });
+  }
+}
+
+// ── ORDERS ──
 let allOrders = [], currentFilter = 'new', isFirstLoad = true;
 let pendingDeleteId = null, pendingDeleteType = null;
 
@@ -548,7 +489,7 @@ function listenOrders() {
 function filterOrders(f, el) {
   currentFilter = f;
   document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-  if(el) el.classList.add('active');
+  el.classList.add('active');
   renderOrders();
 }
 
@@ -563,20 +504,16 @@ function renderOrders() {
   el.innerHTML = orders.map(o => {
     const t = o.createdAt ? o.createdAt.toDate() : new Date();
     const status = o.status || 'new';
-    const delFree = o.deliveryCharge===0 && o.orderType==='delivery';
-    const corpDisc = o.corporateDiscount > 0 ? ` <span style="color:#2E7D32;font-size:11px">💼 −₹${o.corporateDiscount} corp</span>` : '';
     return `<div class="order-card ${status}">
       <div class="order-top">
-        <div>
-          <div class="order-id">#${o.orderId||o.id.slice(-6).toUpperCase()}</div>
-          <div class="order-time">${t.toLocaleDateString('en-IN',{day:'numeric',month:'short'})} · ${t.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}</div>
-        </div>
+        <div><div class="order-id">#${o.orderId||o.id.slice(-6).toUpperCase()}</div>
+        <div class="order-time">${t.toLocaleDateString('en-IN',{day:'numeric',month:'short'})} · ${t.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}</div></div>
         <span class="order-badge badge-${status}">${statusLabel[status]||status}</span>
       </div>
-      <div class="order-customer">👤 ${o.customerName||'Customer'}${o.customerPhone?' &nbsp;📞 '+o.customerPhone:''}</div>
-      <div class="order-detail">${o.orderType==='delivery'?`🛵 Delivery${o.distance?' · '+o.distance+' km':''}${o.address?' · '+o.address:''}`:'🚶 Pickup'}${o.company?` · 💼 ${o.company} (${o.empId||'-'})`:''}</div>
+      <div class="order-customer">👤 ${o.customerName||'Customer'} ${o.customerPhone?'&nbsp;📞 '+o.customerPhone:''}</div>
+      <div class="order-detail">${o.orderType==='delivery'?`🛵 Delivery${o.distance?' · '+o.distance+' km':''}${o.address?' · '+o.address:''}`:'🚶 Pickup'}</div>
       <div class="order-items">${(o.items||[]).map(i=>`• ${i.name} × ${i.qty} = ₹${i.total}`).join('<br>')}</div>
-      <div class="order-total">Total: ₹${o.total||0}${delFree?' <span style="color:#2E7D32;font-size:11px">🎉 FREE Delivery!</span>':''}${corpDisc}</div>
+      <div class="order-total">Total: ₹${o.total||0} ${o.deliveryCharge===0&&o.orderType==='delivery'?'<span style="color:#2E7D32;font-size:11px">FREE Delivery!</span>':''}</div>
       <div class="order-actions">
         ${status==='new'?`<button class="action-btn btn-confirm" onclick="updateStatus('${o.id}','confirmed')">✅ Confirm</button>`:''}
         ${status==='confirmed'?`<button class="action-btn btn-ready" onclick="updateStatus('${o.id}','ready')">🟡 Ready</button>`:''}
@@ -590,7 +527,7 @@ function renderOrders() {
 }
 
 function updateStatus(id, status) {
-  db.collection('orders').doc(id).update({status, updatedAt: new Date()});
+  db.collection('orders').doc(id).update({status});
   showToast(status==='confirmed'?'✅ Confirmed!':status==='ready'?'🟡 Ready!':'🔵 Delivered!');
 }
 
@@ -599,7 +536,7 @@ function openWA(phone, orderId) {
   window.open(`https://wa.me/91${phone}?text=${encodeURIComponent(`Hi! Update on your order #${orderId} from Urban ज़ायका 🍽️`)}`, '_blank');
 }
 
-// ── PRINT ─────────────────────────────────────────────────────────────────────
+// ── PRINT ──
 function printOrder(id) {
   const o = allOrders.find(x => x.id===id);
   if (!o) return;
@@ -610,19 +547,16 @@ function printOrder(id) {
   const t = o.createdAt ? o.createdAt.toDate() : new Date();
 
   let txt = '';
-  txt += '\x1B\x61\x01'; // center align ESC/POS
   txt += '      Urban Zayka\n';
   txt += '   Met City, Haryana\n';
   txt += '   Ph: 8860609555\n';
-  txt += '\x1B\x61\x00'; // left align
   txt += dline+'\n';
   txt += `Order: #${o.orderId||o.id.slice(-6).toUpperCase()}\n`;
   txt += `Date : ${t.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})} ${t.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}\n`;
   txt += `Type : ${o.orderType==='delivery'?'Delivery':'Pickup'}\n`;
   txt += `Name : ${o.customerName||'Customer'}\n`;
   if (o.customerPhone) txt += `Phone: ${o.customerPhone}\n`;
-  if (o.orderType==='delivery' && o.address) txt += `Addr : ${o.address}\n`;
-  if (o.company) txt += `Co.  : ${o.company} (${o.empId||'-'})\n`;
+  if (o.orderType==='delivery'&&o.address) txt += `Addr : ${o.address}\n`;
   txt += line+'\n'+pad('ITEM','AMT')+'\n'+line+'\n';
   (o.items||[]).forEach(item => {
     const nq = `${item.name} x${item.qty}`;
@@ -633,12 +567,8 @@ function printOrder(id) {
   txt += pad('Subtotal',`Rs.${o.subtotal||0}`)+'\n';
   if (o.deliveryCharge>0) txt += pad('Delivery',`Rs.${o.deliveryCharge}`)+'\n';
   else if (o.orderType==='delivery') txt += pad('Delivery','FREE')+'\n';
-  if (o.corporateDiscount>0) txt += pad('Corp Discount',`-Rs.${o.corporateDiscount}`)+'\n';
   txt += dline+'\n'+pad('TOTAL',`Rs.${o.total||0}`)+'\n'+dline+'\n';
-  txt += '\x1B\x61\x01'; // center
-  txt += '\n   Thank you for ordering!\n     urbanzayka.in\n';
-  txt += '\x1D\x56\x41\x05'; // auto cut
-  txt += '\n\n\n';
+  txt += '\n   Thank you for ordering!\n     urbanzayka.in\n\n\n\n';
 
   const bytes = new TextEncoder().encode(txt);
   const b64 = btoa(String.fromCharCode(...bytes));
@@ -656,38 +586,109 @@ function printOrder(id) {
       content: b64,
       source: 'Urban Zayka Admin'
     })
-  })
-  .then(r => r.ok ? r.json().then(j => showToast(`✅ Printing! Job #${j}`)) : r.text().then(e => { console.error(e); showToast('❌ Print failed'); }))
-  .catch(() => showToast('❌ Cannot reach printer'));
+  }).then(r => {
+    if (r.ok) { r.json().then(j => showToast(`✅ Printing! Job #${j}`)); }
+    else { r.text().then(e => { console.error(e); showToast('❌ Print failed — is printer on?'); }); }
+  }).catch(e => {
+    console.error(e);
+    showToast('❌ Cannot reach PrintNode');
+  });
 }
 
-// ── STATS ─────────────────────────────────────────────────────────────────────
+// ── STATS ──
 function updateStats() {
   const today = new Date().toDateString();
   const tod = allOrders.filter(o => (o.createdAt?o.createdAt.toDate():new Date()).toDateString()===today);
   const totRev = allOrders.reduce((s,o)=>s+(o.total||0),0);
   document.getElementById('s-today').textContent = tod.length;
-  document.getElementById('s-rev').textContent   = '₹'+tod.reduce((s,o)=>s+(o.total||0),0);
-  document.getElementById('s-del').textContent   = allOrders.filter(o=>o.orderType==='delivery').length;
-  document.getElementById('s-pick').textContent  = allOrders.filter(o=>o.orderType==='pickup').length;
+  document.getElementById('s-rev').textContent = '₹'+tod.reduce((s,o)=>s+(o.total||0),0);
+  document.getElementById('s-del').textContent = allOrders.filter(o=>o.orderType==='delivery').length;
+  document.getElementById('s-pick').textContent = allOrders.filter(o=>o.orderType==='pickup').length;
   document.getElementById('s-total').textContent = allOrders.length;
-  document.getElementById('s-avg').textContent   = allOrders.length?'₹'+Math.round(totRev/allOrders.length):'₹0';
+  document.getElementById('s-avg').textContent = allOrders.length?'₹'+Math.round(totRev/allOrders.length):'₹0';
 }
 
-// ── MENU ──────────────────────────────────────────────────────────────────────
-let menuItems=[], menuActiveCat='all', editingId=null, isVeg=true;
-let currentImgFile=null, currentImgUrl=null;
+// ── MENU ──
+let menuItems=[], menuActiveCat='all', editingId=null;
+
+const DEFAULT_MENU = [
+  {id:'1',name:'Plain Maggi',price:50,cat:'Breakfast',emoji:'🍜',soldOut:false},
+  {id:'2',name:'Vegetable Maggi',price:80,cat:'Breakfast',emoji:'🍜',soldOut:false},
+  {id:'3',name:'Aloo Paratha',price:50,cat:'Breakfast',emoji:'🫓',soldOut:false},
+  {id:'4',name:'Aloo Pyaz Paratha',price:60,cat:'Breakfast',emoji:'🫓',soldOut:false},
+  {id:'5',name:'Paneer Paratha',price:120,cat:'Breakfast',emoji:'🫓',soldOut:false},
+  {id:'6',name:'Curd (Add-on)',price:30,cat:'Breakfast',emoji:'🥛',soldOut:false},
+  {id:'7',name:'Subji + 4 Puri',price:50,cat:'Breakfast',emoji:'🍽️',soldOut:false},
+  {id:'8',name:'Samosa + Chole',price:50,cat:'Breakfast',emoji:'🥟',soldOut:false},
+  {id:'9',name:'Chole Bature',price:90,cat:'Breakfast',emoji:'🍽️',soldOut:false},
+  {id:'10',name:'Tandoori Chaap',price:200,cat:'Starters',emoji:'🍢',soldOut:false},
+  {id:'11',name:'Malai Chaap',price:220,cat:'Starters',emoji:'🍢',soldOut:false},
+  {id:'12',name:'Chilli Paneer',price:220,cat:'Starters',emoji:'🧀',soldOut:false},
+  {id:'13',name:'Veg Manchurian Dry',price:200,cat:'Starters',emoji:'🥢',soldOut:false},
+  {id:'14',name:'Honey Chilli Potato',price:150,cat:'Starters',emoji:'🥔',soldOut:false},
+  {id:'15',name:'French Fries',price:90,cat:'Starters',emoji:'🍟',soldOut:false},
+  {id:'16',name:'Paneer Tikka',price:250,cat:'Starters',emoji:'🧀',soldOut:false},
+  {id:'17',name:'Paneer Malai Tikka',price:260,cat:'Starters',emoji:'🧀',soldOut:false},
+  {id:'18',name:'Afghani Paneer Tikka',price:250,cat:'Starters',emoji:'🧀',soldOut:false},
+  {id:'19',name:'Veg Pakora',price:180,cat:'Starters',emoji:'🧅',soldOut:false},
+  {id:'20',name:'Chilli Mushroom',price:180,cat:'Starters',emoji:'🍄',soldOut:false},
+  {id:'21',name:'Samosa',price:20,cat:'Starters',emoji:'🥟',soldOut:false},
+  {id:'22',name:'Bread Pakoda',price:25,cat:'Starters',emoji:'🧅',soldOut:false},
+  {id:'23',name:'Veg Grilled Sandwich',price:150,cat:'Sandwiches',emoji:'🥪',soldOut:false},
+  {id:'24',name:'Paneer Grilled Sandwich',price:180,cat:'Sandwiches',emoji:'🥪',soldOut:false},
+  {id:'25',name:'Veg Biryani',price:250,cat:'Indian Main',emoji:'🍚',soldOut:false},
+  {id:'26',name:'Paneer Burji',price:250,cat:'Indian Main',emoji:'🧀',soldOut:false},
+  {id:'27',name:'Kadhai Paneer',price:220,cat:'Indian Main',emoji:'🍛',soldOut:false},
+  {id:'28',name:'Paneer Butter Masala',price:250,cat:'Indian Main',emoji:'🍛',soldOut:false},
+  {id:'29',name:'Paneer ज़ायका',price:250,cat:'Indian Main',emoji:'🍛',soldOut:false},
+  {id:'30',name:'Mix Veg',price:120,cat:'Indian Main',emoji:'🥗',soldOut:false},
+  {id:'31',name:'Mushroom Do Pyaza',price:200,cat:'Indian Main',emoji:'🍄',soldOut:false},
+  {id:'32',name:'Malai Kofta',price:250,cat:'Indian Main',emoji:'🍲',soldOut:false},
+  {id:'33',name:'Aloo Jeera',price:110,cat:'Indian Main',emoji:'🥔',soldOut:false},
+  {id:'34',name:'Rajma Masala',price:180,cat:'Indian Main',emoji:'🫘',soldOut:false},
+  {id:'35',name:'Chole Masala',price:180,cat:'Indian Main',emoji:'🫘',soldOut:false},
+  {id:'36',name:'Dal Makhani',price:200,cat:'Indian Main',emoji:'🍲',soldOut:false},
+  {id:'37',name:'Dal Tadka',price:120,cat:'Indian Main',emoji:'🍲',soldOut:false},
+  {id:'38',name:'Dal Fry',price:100,cat:'Indian Main',emoji:'🍲',soldOut:false},
+  {id:'39',name:'Steamed Rice',price:90,cat:'Indian Main',emoji:'🍚',soldOut:false},
+  {id:'40',name:'Chilli Paneer Gravy',price:220,cat:'Chinese',emoji:'🧀',soldOut:false},
+  {id:'41',name:'Veg Manchurian Gravy',price:220,cat:'Chinese',emoji:'🥢',soldOut:false},
+  {id:'42',name:'Veg Hakka Noodle',price:120,cat:'Chinese',emoji:'🍜',soldOut:false},
+  {id:'43',name:'Schezwan Noodle',price:120,cat:'Chinese',emoji:'🍜',soldOut:false},
+  {id:'44',name:'Veg Noodle',price:100,cat:'Chinese',emoji:'🍜',soldOut:false},
+  {id:'45',name:'Veg Fried Rice',price:100,cat:'Chinese',emoji:'🍚',soldOut:false},
+  {id:'46',name:'Sezwan Fried Rice',price:120,cat:'Chinese',emoji:'🍚',soldOut:false},
+  {id:'47',name:'Plain Roti',price:10,cat:'Breads',emoji:'🫓',soldOut:false},
+  {id:'48',name:'Butter Roti',price:15,cat:'Breads',emoji:'🫓',soldOut:false},
+  {id:'49',name:'Plain Tandoori Roti',price:18,cat:'Breads',emoji:'🫓',soldOut:false},
+  {id:'50',name:'Tandoori Butter Roti',price:20,cat:'Breads',emoji:'🫓',soldOut:false},
+  {id:'51',name:'Tandoori Naan',price:50,cat:'Breads',emoji:'🫓',soldOut:false},
+  {id:'52',name:'Butter Naan',price:70,cat:'Breads',emoji:'🫓',soldOut:false},
+  {id:'53',name:'Garlic Naan',price:80,cat:'Breads',emoji:'🫓',soldOut:false},
+  {id:'54',name:'Laccha Paratha',price:30,cat:'Breads',emoji:'🫓',soldOut:false},
+  {id:'55',name:'Aloo Pyaz Kulcha',price:80,cat:'Breads',emoji:'🫓',soldOut:false},
+  {id:'56',name:'Aloo Kulcha',price:80,cat:'Breads',emoji:'🫓',soldOut:false},
+  {id:'57',name:'Paneer Kulcha',price:120,cat:'Breads',emoji:'🫓',soldOut:false},
+  {id:'58',name:'Chole Masala + Rice',price:150,cat:'Meals',emoji:'🍽️',soldOut:false},
+  {id:'59',name:'Dal Makhani + Rice',price:180,cat:'Meals',emoji:'🍽️',soldOut:false},
+  {id:'60',name:'Rajma Masala + Rice',price:150,cat:'Meals',emoji:'🍽️',soldOut:false},
+  {id:'61',name:'Diet Thali',price:100,cat:'Meals',emoji:'🍱',soldOut:false},
+  {id:'62',name:'ज़ायका Special Thali',price:180,cat:'Meals',emoji:'🍱',soldOut:false},
+  {id:'63',name:'Tea',price:30,cat:'Beverages',emoji:'☕',soldOut:false},
+  {id:'64',name:'Coffee',price:45,cat:'Beverages',emoji:'☕',soldOut:false},
+  {id:'65',name:'Black Tea',price:20,cat:'Beverages',emoji:'🍵',soldOut:false},
+  {id:'66',name:'Black Coffee',price:30,cat:'Beverages',emoji:'☕',soldOut:false},
+];
 
 function initMenu() {
-  // Listen to menuItems collection, fallback to menu
-  db.collection('menuItems').onSnapshot(snap => {
-    if (!snap.empty) {
-      menuItems = snap.docs.map(d => ({id:d.id,...d.data()}));
-      renderMenuAdmin();
-      return;
+  db.collection('menu').get().then(snap => {
+    if (snap.empty) {
+      const batch = db.batch();
+      DEFAULT_MENU.forEach(item => batch.set(db.collection('menu').doc(item.id), item));
+      batch.commit();
     }
-    db.collection('menu').onSnapshot(snap2 => {
-      menuItems = snap2.docs.map(d => ({id:d.id,...d.data()}));
+    db.collection('menu').onSnapshot(snap => {
+      menuItems = snap.docs.map(d => ({id:d.id,...d.data()}));
       renderMenuAdmin();
     });
   });
@@ -696,286 +697,128 @@ function initMenu() {
 function renderMenuAdmin() {
   const cats = ['all',...Object.keys(CAT_EMOJIS)];
   document.getElementById('cat-filter-bar').innerHTML = cats.map(c =>
-    `<button class="cat-pill ${menuActiveCat===c?'active':''}" onclick="setMenuCat('${c}')">${c==='all'?'All':(CAT_EMOJIS[c]||'')+' '+(CAT_LABELS[c]||c)}</button>`
+    `<button class="cat-pill ${menuActiveCat===c?'active':''}" onclick="setMenuCat('${c}')">${c==='all'?'All':(CAT_EMOJIS[c]||'')+' '+c}</button>`
   ).join('');
   document.getElementById('menu-count').textContent = menuItems.length;
-
-  const filtered = menuActiveCat==='all' ? menuItems : menuItems.filter(i => (i.category||i.cat)===menuActiveCat);
+  const filtered = menuActiveCat==='all'?menuItems:menuItems.filter(i=>i.cat===menuActiveCat);
   const groups = {};
-  filtered.forEach(item => {
-    const cat = item.category || item.cat || 'other';
-    if(!groups[cat]) groups[cat]=[];
-    groups[cat].push(item);
-  });
+  filtered.forEach(item => { if(!groups[item.cat]) groups[item.cat]=[]; groups[item.cat].push(item); });
   Object.keys(groups).forEach(cat => groups[cat].sort((a,b)=>{
     const pa=isPaneer(a.name)?0:1, pb=isPaneer(b.name)?0:1;
     if(pa!==pb) return pa-pb;
     return b.price-a.price;
   }));
-
-  let html = '';
-  Object.entries(groups).forEach(([cat,items]) => {
-    if(menuActiveCat==='all') html += `<div class="menu-cat-title">${CAT_EMOJIS[cat]||'🍽️'} ${CAT_LABELS[cat]||cat}</div>`;
-    items.forEach(item => {
-      const thumb = item.imageUrl
-        ? `<div class="menu-item-thumb"><img src="${item.imageUrl}" alt="${item.name}" onerror="this.parentNode.innerHTML='${(item.emoji||'🍽️')}'"/></div>`
-        : `<div class="menu-item-thumb">${item.emoji||'🍽️'}</div>`;
-      const corpPill = item.isCorporate
-        ? `<span class="corp-pill">💼 −₹${item.corporateDiscountAmount||40}</span>`
-        : '';
-      html += `<div class="menu-item-row ${item.isCorporate?'has-corp':''}">
-        ${thumb}
+  let html='';
+  Object.entries(groups).forEach(([cat,items])=>{
+    if(menuActiveCat==='all') html+=`<div class="menu-cat-title">${CAT_EMOJIS[cat]||''} ${cat}</div>`;
+    items.forEach(item=>{
+      html+=`<div class="menu-item-row ${item.soldOut?'opacity:0.5':''}">
+        <div class="menu-item-emoji">${item.emoji||'🍽️'}</div>
         <div class="menu-item-left">
           <div class="menu-item-name ${item.soldOut?'crossed':''}">${item.name}</div>
-          <div class="menu-item-cat">${CAT_LABELS[item.category||item.cat]||item.category||item.cat}</div>
+          <div class="menu-item-cat">${item.cat}</div>
           <div class="menu-item-price">₹${item.price}</div>
-          ${corpPill}
         </div>
         <div class="menu-item-controls">
-          <button class="soldout-toggle ${item.soldOut?'soldout':''}" onclick="toggleSoldOut('${item.id}',${!item.soldOut})">${item.soldOut?'Sold Out':'In Stock'}</button>
+          <button class="soldout-toggle ${item.soldOut?'soldout':''}" onclick="toggleSoldOut('${item.id}',${!item.soldOut})">${item.soldOut?'Sold Out':'Available'}</button>
           <button class="edit-btn" onclick="openEditModal('${item.id}')">✏️</button>
-          <button class="delete-menu-btn" onclick="confirmDelete('menu','${item.id}','${item.name.replace(/'/g,"\\'")}')">🗑️</button>
+          <button class="delete-menu-btn" onclick="confirmDelete('menu','${item.id}','${item.name}')">🗑️</button>
         </div>
       </div>`;
     });
   });
-  document.getElementById('menu-list-admin').innerHTML = html || '<div class="empty-state"><div class="empty-icon">🍽️</div><p>No items</p></div>';
+  document.getElementById('menu-list-admin').innerHTML = html||'<div class="empty-state"><div class="empty-icon">🍽️</div><p>No items</p></div>';
 }
 
 function setMenuCat(cat) { menuActiveCat=cat; renderMenuAdmin(); }
-
-function toggleSoldOut(id, soldOut) {
-  const col = menuItems.find(i=>i.id===id)?.category ? 'menuItems' : 'menu';
-  db.collection(col).doc(id).update({soldOut, available:!soldOut, updatedAt:new Date()});
-  showToast(soldOut?'⛔ Marked Sold Out':'✅ Now Available');
-}
-
-// ── MODAL ─────────────────────────────────────────────────────────────────────
-function setVeg(v) {
-  isVeg = v;
-  document.getElementById('opt-veg').classList.toggle('on', v);
-  document.getElementById('opt-nonveg').classList.toggle('on', !v);
-}
-
-function toggleCorpAmountRow() {
-  const checked = document.getElementById('m-corp').checked;
-  document.getElementById('corp-amount-row').classList.toggle('show', checked);
-}
-
-function previewImage(e) {
-  const file = e.target.files[0]; if(!file) return;
-  if(file.size > 5*1024*1024) { showToast('❌ Image too large. Max 5MB.'); return; }
-  currentImgFile = file;
-  const reader = new FileReader();
-  reader.onload = ev => {
-    document.getElementById('img-preview').src = ev.target.result;
-    document.getElementById('img-preview-name').textContent = file.name;
-    document.getElementById('img-preview-wrap').style.display = 'block';
-    document.getElementById('img-placeholder').style.display = 'none';
-    document.getElementById('img-upload-area').classList.add('has-img');
-  };
-  reader.readAsDataURL(file);
-}
-
-function resetImageUI(existingUrl) {
-  currentImgFile = null; currentImgUrl = existingUrl || null;
-  document.getElementById('m-img').value = '';
-  document.getElementById('img-progress').style.display = 'none';
-  document.getElementById('img-progress-fill').style.width = '0%';
-  document.getElementById('img-upload-area').classList.remove('has-img');
-  if(existingUrl) {
-    document.getElementById('img-preview').src = existingUrl;
-    document.getElementById('img-preview-name').textContent = 'Current photo';
-    document.getElementById('img-preview-wrap').style.display = 'block';
-    document.getElementById('img-placeholder').style.display = 'none';
-    document.getElementById('img-upload-area').classList.add('has-img');
-  } else {
-    document.getElementById('img-preview-wrap').style.display = 'none';
-    document.getElementById('img-placeholder').style.display = 'flex';
-  }
-}
-
-async function uploadImageToCloudinary() {
-  if(!currentImgFile) return currentImgUrl;
-  return new Promise((resolve, reject) => {
-    const fd = new FormData();
-    fd.append('file', currentImgFile);
-    fd.append('upload_preset', CLOUDINARY_PRESET);
-    fd.append('folder', 'urban_zayka_menu');
-    const xhr = new XMLHttpRequest();
-    xhr.open('POST', `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`);
-    xhr.upload.onprogress = e => {
-      if(e.lengthComputable) {
-        const pct = Math.round(e.loaded/e.total*100);
-        document.getElementById('img-progress').style.display = 'block';
-        document.getElementById('img-progress-fill').style.width = pct+'%';
-        document.getElementById('img-progress-txt').textContent = `Uploading... ${pct}%`;
-      }
-    };
-    xhr.onload = () => {
-      if(xhr.status===200) {
-        const res = JSON.parse(xhr.responseText);
-        const url = res.secure_url.replace('/upload/','/upload/f_auto,q_auto,w_200,h_200,c_fill/');
-        document.getElementById('img-progress-txt').textContent = '✅ Photo uploaded!';
-        resolve(url);
-      } else reject(new Error('Upload failed'));
-    };
-    xhr.onerror = () => reject(new Error('Network error'));
-    xhr.send(fd);
-  });
+function toggleSoldOut(id,soldOut) {
+  db.collection('menu').doc(id).update({soldOut});
+  showToast(soldOut?'❌ Sold Out':'✅ Available');
 }
 
 function openAddModal() {
-  editingId = null;
-  document.getElementById('modal-title').textContent = '➕ Add New Item';
-  document.getElementById('m-name').value = '';
-  document.getElementById('m-nameHi').value = '';
-  document.getElementById('m-cat').value = 'starters';
-  document.getElementById('m-price').value = '';
-  document.getElementById('m-emoji').value = '🍽️';
-  document.getElementById('m-desc').value = '';
-  document.getElementById('m-best').checked = false;
-  document.getElementById('m-corp').checked = false;
-  document.getElementById('m-corp-amount').value = '40';
-  toggleCorpAmountRow();
-  document.getElementById('modal-delete-btn').style.display = 'none';
-  resetImageUI(null);
-  setVeg(true);
+  editingId=null;
+  document.getElementById('modal-title').textContent='➕ Add New Item';
+  document.getElementById('m-name').value='';
+  document.getElementById('m-cat').value='Starters';
+  document.getElementById('m-price').value='';
+  document.getElementById('m-emoji').value='🍽️';
+  document.getElementById('m-desc').value='';
   document.getElementById('item-modal').classList.add('show');
-  setTimeout(() => document.getElementById('m-name').focus(), 300);
+  setTimeout(()=>document.getElementById('m-name').focus(),300);
 }
 
 function openEditModal(id) {
-  const item = menuItems.find(i=>i.id===id); if(!item) return;
-  editingId = id;
-  document.getElementById('modal-title').textContent = '✏️ Edit Item';
-  document.getElementById('m-name').value   = item.name||'';
-  document.getElementById('m-nameHi').value = item.nameHi||'';
-  document.getElementById('m-cat').value    = item.category||item.cat||'starters';
-  document.getElementById('m-price').value  = item.price||'';
-  document.getElementById('m-emoji').value  = item.emoji||'🍽️';
-  document.getElementById('m-desc').value   = item.description||item.desc||'';
-  document.getElementById('m-best').checked = !!(item.bestseller||item.best);
-  document.getElementById('m-corp').checked = !!item.isCorporate;
-  document.getElementById('m-corp-amount').value = item.corporateDiscountAmount || 40;
-  toggleCorpAmountRow();
-  document.getElementById('modal-delete-btn').style.display = 'block';
-  resetImageUI(item.imageUrl||null);
-  setVeg(!!(item.veg||item.isVeg));
+  const item=menuItems.find(i=>i.id===id);
+  if(!item) return;
+  editingId=id;
+  document.getElementById('modal-title').textContent='✏️ Edit Item';
+  document.getElementById('m-name').value=item.name;
+  document.getElementById('m-cat').value=item.cat;
+  document.getElementById('m-price').value=item.price;
+  document.getElementById('m-emoji').value=item.emoji||'🍽️';
+  document.getElementById('m-desc').value=item.desc||'';
   document.getElementById('item-modal').classList.add('show');
 }
 
 function closeModal() { document.getElementById('item-modal').classList.remove('show'); }
 
-async function saveItem() {
-  const name  = document.getElementById('m-name').value.trim();
-  const price = parseInt(document.getElementById('m-price').value);
-  const cat   = document.getElementById('m-cat').value;
-  if(!name)        { showToast('❌ Enter item name'); return; }
-  if(!price||price<0) { showToast('❌ Enter valid price'); return; }
-
-  const isCorp = document.getElementById('m-corp').checked;
-  const corpAmount = isCorp ? (parseInt(document.getElementById('m-corp-amount').value) || 0) : 0;
-  if (isCorp && corpAmount <= 0) { showToast('❌ Enter a valid corporate discount amount'); return; }
-
-  const btn = document.getElementById('modal-save-btn');
-  btn.disabled = true; btn.textContent = 'Saving...';
-
-  let imageUrl = currentImgUrl || '';
-  if(currentImgFile) {
-    btn.textContent = 'Uploading photo...';
-    try { imageUrl = await uploadImageToCloudinary(); }
-    catch(e) { showToast('⚠️ Photo upload failed, saving without photo'); imageUrl = currentImgUrl||''; }
+function saveItem() {
+  const name=document.getElementById('m-name').value.trim();
+  const cat=document.getElementById('m-cat').value;
+  const price=parseInt(document.getElementById('m-price').value);
+  const emoji=document.getElementById('m-emoji').value.trim()||'🍽️';
+  const desc=document.getElementById('m-desc').value.trim();
+  if(!name){showToast('❌ Enter item name');return;}
+  if(!price||price<0){showToast('❌ Enter valid price');return;}
+  const data={name,cat,price,emoji,desc,soldOut:false};
+  if(editingId){
+    db.collection('menu').doc(editingId).update({name,cat,price,emoji,desc});
+    showToast(`✅ ${name} updated!`);
+  } else {
+    const newId=Date.now().toString();
+    db.collection('menu').doc(newId).set({id:newId,...data});
+    showToast(`✅ ${name} added!`);
   }
-
-  const data = {
-    name,
-    nameHi:     document.getElementById('m-nameHi').value.trim()||'',
-    category:   cat,
-    cat:        cat,
-    price,
-    emoji:      document.getElementById('m-emoji').value.trim()||'🍽️',
-    description:document.getElementById('m-desc').value.trim()||'',
-    desc:       document.getElementById('m-desc').value.trim()||'',
-    veg:        isVeg,
-    isVeg:      isVeg,
-    bestseller: document.getElementById('m-best').checked,
-    best:       document.getElementById('m-best').checked,
-    isCorporate: isCorp,
-    corporateDiscountAmount: corpAmount,
-    imageUrl,
-    soldOut:    false,
-    available:  true,
-    updatedAt:  new Date()
-  };
-
-  try {
-    if(editingId) {
-      await db.collection('menuItems').doc(editingId).update(data);
-      showToast(`✅ ${name} updated!`);
-    } else {
-      data.createdAt = new Date();
-      await db.collection('menuItems').add(data);
-      showToast(`✅ ${name} added!`);
-    }
-    closeModal();
-  } catch(e) { showToast('❌ Error saving item'); }
-  btn.disabled = false; btn.textContent = 'Save Item';
-}
-
-function deleteMenuItemFromModal() {
-  if(!editingId) return;
-  const item = menuItems.find(i=>i.id===editingId);
   closeModal();
-  confirmDelete('menu', editingId, item?.name||'item');
 }
 
-// ── CONFIRM DELETE ────────────────────────────────────────────────────────────
-function confirmDelete(type, id, label) {
-  pendingDeleteId = id; pendingDeleteType = type;
-  document.getElementById('confirm-title').textContent = type==='order' ? 'Delete Order?' : `Delete "${label}"?`;
-  document.getElementById('confirm-msg').textContent   = type==='order' ? `Order from ${label} will be permanently deleted.` : 'This menu item will be permanently deleted.';
-  document.getElementById('confirm-ok-btn').onclick = async () => {
-    const col = pendingDeleteType==='order' ? 'orders' : 'menuItems';
-    try {
-      await db.collection(col).doc(pendingDeleteId).delete();
-      // fallback: also try 'menu' collection for old items
-      if(pendingDeleteType==='menu') {
-        db.collection('menu').doc(pendingDeleteId).delete().catch(()=>{});
-      }
-      showToast('🗑️ Deleted');
-    } catch(e) { showToast('❌ Error deleting'); }
+// ── CONFIRM DELETE ──
+function confirmDelete(type,id,label) {
+  pendingDeleteId=id; pendingDeleteType=type;
+  document.getElementById('confirm-title').textContent=type==='order'?`Delete Order?`:`Delete "${label}"?`;
+  document.getElementById('confirm-msg').textContent=type==='order'?`Order from ${label} will be deleted.`:`This menu item will be permanently deleted.`;
+  document.getElementById('confirm-ok-btn').onclick=async()=>{
+    const col=pendingDeleteType==='order'?'orders':'menu';
+    await db.collection(col).doc(pendingDeleteId).delete();
+    showToast('🗑️ Deleted');
     closeConfirm();
   };
   document.getElementById('confirm-overlay').classList.add('show');
 }
 function closeConfirm() { document.getElementById('confirm-overlay').classList.remove('show'); }
 
-// ── TOAST ─────────────────────────────────────────────────────────────────────
+// ── TOAST ──
 function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg; t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 3000);
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),3000);
 }
 
-// Close modals on backdrop click
-document.getElementById('item-modal').addEventListener('click', function(e){ if(e.target===this) closeModal(); });
-document.getElementById('confirm-overlay').addEventListener('click', function(e){ if(e.target===this) closeConfirm(); });
+document.getElementById('item-modal').addEventListener('click',function(e){if(e.target===this)closeModal();});
+document.getElementById('confirm-overlay').addEventListener('click',function(e){if(e.target===this)closeConfirm();});
 
 // iOS PWA install hint
-const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
-const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
-if(isIOS && !isStandalone && (localStorage.getItem('uzAdmin')||sessionStorage.getItem('uzAdmin'))) {
-  setTimeout(() => {
-    const bar = document.createElement('div');
-    bar.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#1A1A2E;color:#fff;padding:14px 16px 32px;font-size:13px;z-index:999;text-align:center;line-height:1.6;border-radius:16px 16px 0 0';
-    bar.innerHTML = '📲 <strong>Install:</strong> Tap Share ⬆️ → Add to Home Screen<button onclick="this.parentNode.remove()" style="position:absolute;top:10px;right:14px;background:none;border:none;color:#aaa;font-size:20px;cursor:pointer">×</button>';
+const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
+const isStandalone=window.navigator.standalone||window.matchMedia('(display-mode: standalone)').matches;
+if(isIOS&&!isStandalone&&(localStorage.getItem('uzAdmin')||sessionStorage.getItem('uzAdmin'))){
+  setTimeout(()=>{
+    const bar=document.createElement('div');
+    bar.style.cssText='position:fixed;bottom:0;left:0;right:0;background:#1A1A2E;color:#fff;padding:14px 16px 32px;font-size:13px;z-index:999;text-align:center;line-height:1.6;border-radius:16px 16px 0 0';
+    bar.innerHTML='📲 <strong>Install:</strong> Tap Share ⬆️ → Add to Home Screen<button onclick="this.parentNode.remove()" style="position:absolute;top:10px;right:14px;background:none;border:none;color:#aaa;font-size:20px;cursor:pointer">×</button>';
     document.body.appendChild(bar);
-  }, 3000);
+  },3000);
 }
-
-// Service worker
-if('serviceWorker' in navigator) navigator.serviceWorker.register('/firebase-messaging-sw.js').catch(()=>{});
 </script>
 </body>
 </html>
