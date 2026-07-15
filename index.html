@@ -11,18 +11,6 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <title>Urban ज़ायका — Admin</title>
 
-<!-- OneSignal Web Push SDK -->
-<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
-<script>
-  window.OneSignalDeferred = window.OneSignalDeferred || [];
-  OneSignalDeferred.push(async function(OneSignal) {
-    await OneSignal.init({
-      appId: "73019306-4d31-44ce-b1b0-06cc77deed70",
-      notifyButton: { enable: false },
-    });
-  });
-</script>
-
 <!-- Firebase via CDN (compat SDK) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -39,7 +27,6 @@ function doLogin() {
     document.getElementById('login-page').style.display = 'none';
     document.getElementById('dashboard').style.display = 'flex';
     initApp();
-    autoPromptNotif();
   } else {
     document.getElementById('login-err').style.display = 'block';
     document.getElementById('pwd-input').value = '';
@@ -326,7 +313,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
     <label>Emoji Icon</label>
     <input type="text" id="m-emoji" placeholder="e.g. 🧀" maxlength="2">
     <label>Description (optional)</label>
-    <input type="text" id="m-desc" placeholder="e.g. Tandoor grilled paneer">
+    <textarea id="m-desc" rows="2" placeholder="e.g. Dal + Sabji + Rice + Roti + Green Salad" style="width:100%;border:1.5px solid #e0e0e0;border-radius:12px;padding:12px 13px;font-size:15px;font-family:inherit;outline:none;resize:none;"></textarea>
     <div class="modal-btns">
       <button class="modal-cancel" onclick="closeModal()">Cancel</button>
       <button class="modal-save" onclick="saveItem()">Save Item</button>
@@ -335,7 +322,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 </div>
 
 <script>
-const PRINTNODE_API_KEY = 'DyQsAq9AOczxV7Rz3LuMdOIIsOts8X7o4_8NpEZ7r7M';
+const PRINTNODE_API_KEY   = 'DyQsAq9AOczxV7Rz3LuMdOIIsOts8X7o4_8NpEZ7r7M';
+const ONESIGNAL_APP_ID    = '73019306-4d31-44ce-b1b0-06cc77deed70';
+const ONESIGNAL_API_KEY   = 'os_v2_app_omazgbsngfcm5mnqa3ghpxxnob2yrtokw75uci5ebzwl2a2udvh6izfaaxc7zz5dkosszkdgkzt2pdthvm6e4x6sfy3u6ywm44r4ry';
 const PRINTNODE_PRINTER_ID = 75568733;
 const CAT_EMOJIS = {'Breakfast':'🌅','Starters':'🍢','Sandwiches':'🥪','Indian Main':'🍛','Chinese':'🥢','Breads':'🫓','Meals':'🍱','Beverages':'☕'};
 const isPaneer = n => /paneer/i.test(n);
@@ -362,7 +351,6 @@ function initApp() {
 // Auto-login after Firebase ready
 if (localStorage.getItem('uzAdmin') || sessionStorage.getItem('uzAdmin')) {
   initApp();
-  autoPromptNotif();
 }
 
 // ── AUDIO ──
@@ -414,64 +402,20 @@ function goToOrders() {
   document.getElementById('new-order-alert').classList.remove('show');
 }
 
-// ── NOTIFICATIONS via OneSignal ──
-async function requestNotif() {
-  OneSignalDeferred.push(async function(OneSignal) {
-    const granted = await OneSignal.Notifications.permission;
-    if (granted) { showToast('✅ Already enabled!'); return; }
-    await OneSignal.Notifications.requestPermission();
-    const now = await OneSignal.Notifications.permission;
-    showToast(now ? '✅ Done! Alerts even when app is closed.' : '❌ Please allow in browser settings');
+// ── NOTIFICATIONS ──
+function requestNotif() {
+  if (!('Notification' in window)) { showToast('❌ Not supported'); return; }
+  if (Notification.permission === 'granted') { showToast('✅ Already enabled!'); return; }
+  Notification.requestPermission().then(r => {
+    if (r === 'granted') showToast('✅ Notifications enabled!');
+    else showToast('❌ Please allow in settings');
   });
 }
 
 function sendNotif(title, body) {
-  // Foreground notification (app is open)
   if (Notification.permission === 'granted') {
-    new Notification(title, {
-      body, icon: '/icon-192.png', badge: '/icon-192.png',
-      vibrate: [200,100,200,100,200], requireInteraction: true
-    });
+    new Notification(title, { body, icon:'/icon-192.png', badge:'/icon-192.png', vibrate:[200,100,200], requireInteraction:true });
   }
-  // Background notification via OneSignal (app is closed)
-  sendOneSignalPush(title, body);
-}
-
-async function sendOneSignalPush(title, body) {
-  try {
-    await fetch('https://api.onesignal.com/notifications', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Key ' + ONESIGNAL_API_KEY
-      },
-      body: JSON.stringify({
-        app_id: ONESIGNAL_APP_ID,
-        target_channel: 'push',
-        included_segments: ['Total Subscriptions'],
-        headings: { en: title },
-        contents: { en: body },
-        url: 'https://admin.urbanzayka.in',
-        chrome_web_icon: 'https://admin.urbanzayka.in/icon-192.png',
-        priority: 10,
-        ttl: 300
-      })
-    });
-    console.log('✅ OneSignal push sent');
-  } catch(e) {
-    console.warn('OneSignal push failed:', e.message);
-  }
-}
-
-function autoPromptNotif() {
-  if (localStorage.getItem('osPrompted')) return;
-  localStorage.setItem('osPrompted', '1');
-  setTimeout(() => {
-    OneSignalDeferred.push(async function(OneSignal) {
-      const granted = await OneSignal.Notifications.permission;
-      if (!granted) await OneSignal.Notifications.requestPermission();
-    });
-  }, 3000);
 }
 
 // ── ORDERS ──
@@ -699,14 +643,16 @@ const DEFAULT_MENU = [
 ];
 
 function initMenu() {
-  db.collection('menu').get().then(snap => {
-    if (snap.empty) {
-      const batch = db.batch();
-      DEFAULT_MENU.forEach(item => batch.set(db.collection('menu').doc(item.id), item));
-      batch.commit();
-    }
-    db.collection('menu').onSnapshot(snap => {
+  // Listen to menuItems collection (customer app source of truth)
+  db.collection('menuItems').onSnapshot(snap => {
+    if (!snap.empty) {
       menuItems = snap.docs.map(d => ({id:d.id,...d.data()}));
+      renderMenuAdmin();
+      return;
+    }
+    // Fallback to old menu collection
+    db.collection('menu').onSnapshot(snap2 => {
+      menuItems = snap2.docs.map(d => ({id:d.id,...d.data()}));
       renderMenuAdmin();
     });
   });
@@ -750,7 +696,7 @@ function renderMenuAdmin() {
 
 function setMenuCat(cat) { menuActiveCat=cat; renderMenuAdmin(); }
 function toggleSoldOut(id,soldOut) {
-  db.collection('menu').doc(id).update({soldOut});
+  db.collection('menuItems').doc(id).update({soldOut, available: !soldOut});
   showToast(soldOut?'❌ Sold Out':'✅ Available');
 }
 
@@ -782,20 +728,43 @@ function openEditModal(id) {
 function closeModal() { document.getElementById('item-modal').classList.remove('show'); }
 
 function saveItem() {
-  const name=document.getElementById('m-name').value.trim();
-  const cat=document.getElementById('m-cat').value;
-  const price=parseInt(document.getElementById('m-price').value);
-  const emoji=document.getElementById('m-emoji').value.trim()||'🍽️';
-  const desc=document.getElementById('m-desc').value.trim();
-  if(!name){showToast('❌ Enter item name');return;}
-  if(!price||price<0){showToast('❌ Enter valid price');return;}
-  const data={name,cat,price,emoji,desc,soldOut:false};
-  if(editingId){
-    db.collection('menu').doc(editingId).update({name,cat,price,emoji,desc});
+  const name  = document.getElementById('m-name').value.trim();
+  const cat   = document.getElementById('m-cat').value;
+  const price = parseInt(document.getElementById('m-price').value);
+  const emoji = document.getElementById('m-emoji').value.trim() || '🍽️';
+  const desc  = document.getElementById('m-desc').value.trim();
+  if (!name)           { showToast('❌ Enter item name'); return; }
+  if (!price || price < 0) { showToast('❌ Enter valid price'); return; }
+
+  // Normalize category to lowercase for customer app compatibility
+  const catNorm = cat.toLowerCase().replace(' main','').replace(' ','');
+  const catMap = {
+    'breakfast':'breakfast','starters':'starters','sandwiches':'sandwiches',
+    'indianmain':'indian','indian':'indian','chinese':'chinese',
+    'breads':'breads','meals':'meals','beverages':'beverages'
+  };
+  const catLower = catMap[catNorm] || catNorm;
+
+  const data = {
+    name,
+    category:    catLower,
+    cat:         catLower,
+    price,
+    emoji,
+    description: desc,
+    desc:        desc,
+    sub:         desc,
+    soldOut:     false,
+    available:   true,
+    updatedAt:   new Date()
+  };
+
+  if (editingId) {
+    db.collection('menuItems').doc(editingId).update(data);
     showToast(`✅ ${name} updated!`);
   } else {
-    const newId=Date.now().toString();
-    db.collection('menu').doc(newId).set({id:newId,...data});
+    data.createdAt = new Date();
+    db.collection('menuItems').add(data);
     showToast(`✅ ${name} added!`);
   }
   closeModal();
@@ -807,7 +776,7 @@ function confirmDelete(type,id,label) {
   document.getElementById('confirm-title').textContent=type==='order'?`Delete Order?`:`Delete "${label}"?`;
   document.getElementById('confirm-msg').textContent=type==='order'?`Order from ${label} will be deleted.`:`This menu item will be permanently deleted.`;
   document.getElementById('confirm-ok-btn').onclick=async()=>{
-    const col=pendingDeleteType==='order'?'orders':'menu';
+    const col=pendingDeleteType==='order'?'orders':'menuItems';
     await db.collection(col).doc(pendingDeleteId).delete();
     showToast('🗑️ Deleted');
     closeConfirm();
