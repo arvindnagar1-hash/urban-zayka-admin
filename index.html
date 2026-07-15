@@ -299,14 +299,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
     <input type="text" id="m-name" placeholder="e.g. Paneer Tikka">
     <label>Category</label>
     <select id="m-cat">
-      <option value="Breakfast">🌅 Breakfast</option>
-      <option value="Starters">🍢 Starters</option>
-      <option value="Sandwiches">🥪 Sandwiches</option>
-      <option value="Indian Main">🍛 Indian Main</option>
-      <option value="Chinese">🥢 Chinese</option>
-      <option value="Breads">🫓 Breads</option>
-      <option value="Meals">🍱 Meals</option>
-      <option value="Beverages">☕ Beverages</option>
+      <option value="breakfast">🌅 Breakfast</option>
+      <option value="starters">🍢 Starters</option>
+      <option value="sandwiches">🥪 Sandwiches</option>
+      <option value="indian">🍛 Indian Main</option>
+      <option value="chinese">🥢 Chinese</option>
+      <option value="breads">🫓 Breads</option>
+      <option value="meals">🍱 Meals</option>
+      <option value="beverages">☕ Beverages</option>
     </select>
     <label>Price (₹)</label>
     <input type="number" id="m-price" placeholder="e.g. 250" min="0">
@@ -726,15 +726,26 @@ function openAddModal() {
 }
 
 function openEditModal(id) {
-  const item=menuItems.find(i=>i.id===id);
-  if(!item) return;
-  editingId=id;
-  document.getElementById('modal-title').textContent='✏️ Edit Item';
-  document.getElementById('m-name').value=item.name;
-  document.getElementById('m-cat').value=item.category||item.cat||'Starters';
-  document.getElementById('m-price').value=item.price;
-  document.getElementById('m-emoji').value=item.emoji||'🍽️';
-  document.getElementById('m-desc').value=item.desc||'';
+  const item = menuItems.find(i => i.id === id);
+  if (!item) return;
+  editingId = id;
+
+  // Normalize category to lowercase to match dropdown option values
+  const catRaw = item.category || item.cat || '';
+  const catMap = {
+    'Breakfast':'breakfast','Starters':'starters','Sandwiches':'sandwiches',
+    'Indian Main':'indian','Chinese':'chinese','Breads':'breads',
+    'Meals':'meals','Beverages':'beverages'
+  };
+  const catNorm = catMap[catRaw] || catRaw.toLowerCase().replace(' main','').replace('indian main','indian');
+
+  document.getElementById('modal-title').textContent = '✏️ Edit Item';
+  document.getElementById('m-name').value  = item.name || '';
+  document.getElementById('m-cat').value   = catNorm;
+  document.getElementById('m-price').value = item.price || '';
+  document.getElementById('m-emoji').value = item.emoji || '🍽️';
+  // description saved as description/desc/sub — check all
+  document.getElementById('m-desc').value  = item.description || item.desc || item.sub || '';
   document.getElementById('item-modal').classList.add('show');
 }
 
