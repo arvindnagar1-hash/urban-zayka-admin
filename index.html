@@ -11,6 +11,18 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <title>Urban ज़ायका — Admin</title>
 
+<!-- OneSignal Web Push SDK -->
+<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+<script>
+  window.OneSignalDeferred = window.OneSignalDeferred || [];
+  OneSignalDeferred.push(async function(OneSignal) {
+    await OneSignal.init({
+      appId: "73019306-4d31-44ce-b1b0-06cc77deed70",
+      notifyButton: { enable: false },
+    });
+  });
+</script>
+
 <!-- Firebase via CDN (compat SDK) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -27,7 +39,7 @@ function doLogin() {
     document.getElementById('login-page').style.display = 'none';
     document.getElementById('dashboard').style.display = 'flex';
     initApp();
-    if (Notification.permission === 'granted') setTimeout(initFCM, 2000);
+    autoPromptNotif();
   } else {
     document.getElementById('login-err').style.display = 'block';
     document.getElementById('pwd-input').value = '';
@@ -350,7 +362,7 @@ function initApp() {
 // Auto-login after Firebase ready
 if (localStorage.getItem('uzAdmin') || sessionStorage.getItem('uzAdmin')) {
   initApp();
-  if (Notification.permission === 'granted') setTimeout(initFCM, 2000);
+  autoPromptNotif();
 }
 
 // ── AUDIO ──
@@ -402,58 +414,35 @@ function goToOrders() {
   document.getElementById('new-order-alert').classList.remove('show');
 }
 
-// ── NOTIFICATIONS + FCM ──
-const VAPID_KEY = 'BHxTq1AvMoAgP43J_ILyHhq-bbqvElECxdT3AMTGwuj_W-9jfmfWfTFGO1vodLZivZ9K4htFx1yYSDHG29MawKI';
-let fcmMessaging = null;
-
-async function initFCM() {
-  try {
-    if (!('serviceWorker' in navigator)) return;
-    const swReg = await navigator.serviceWorker.ready;
-    fcmMessaging = firebase.messaging();
-    const token = await fcmMessaging.getToken({ vapidKey: VAPID_KEY, serviceWorkerRegistration: swReg });
-    if (token) {
-      console.log('✅ FCM Token:', token.slice(0,20)+'...');
-      localStorage.setItem('fcmToken', token);
-    }
-    fcmMessaging.onMessage((payload) => {
-      playRing();
-      sendNotif(
-        payload.notification?.title || '🔔 New Order!',
-        payload.notification?.body  || 'New order received at Urban Zayka'
-      );
-    });
-  } catch(e) {
-    console.warn('FCM init failed:', e.message);
-  }
-}
-
+// ── NOTIFICATIONS via OneSignal ──
 async function requestNotif() {
-  if (!('Notification' in window)) { showToast('❌ Not supported on this browser'); return; }
-  if (Notification.permission === 'granted') {
-    showToast('✅ Already enabled! Re-registering...');
-    await initFCM();
-    return;
-  }
-  const result = await Notification.requestPermission();
-  if (result === 'granted') {
-    showToast('✅ Notifications enabled!');
-    await initFCM();
-  } else {
-    showToast('❌ Please allow notifications in browser settings');
-  }
+  OneSignalDeferred.push(async function(OneSignal) {
+    const granted = await OneSignal.Notifications.permission;
+    if (granted) { showToast('✅ Already enabled!'); return; }
+    await OneSignal.Notifications.requestPermission();
+    const now = await OneSignal.Notifications.permission;
+    showToast(now ? '✅ Done! Alerts even when app is closed.' : '❌ Please allow in browser settings');
+  });
 }
 
 function sendNotif(title, body) {
   if (Notification.permission === 'granted') {
     new Notification(title, {
-      body,
-      icon:  '/icon-192.png',
-      badge: '/icon-192.png',
-      vibrate: [200, 100, 200, 100, 200],
-      requireInteraction: true
+      body, icon: '/icon-192.png', badge: '/icon-192.png',
+      vibrate: [200,100,200,100,200], requireInteraction: true
     });
   }
+}
+
+function autoPromptNotif() {
+  if (localStorage.getItem('osPrompted')) return;
+  localStorage.setItem('osPrompted', '1');
+  setTimeout(() => {
+    OneSignalDeferred.push(async function(OneSignal) {
+      const granted = await OneSignal.Notifications.permission;
+      if (!granted) await OneSignal.Notifications.requestPermission();
+    });
+  }, 3000);
 }
 
 // ── ORDERS ──
