@@ -507,6 +507,7 @@ function renderOrders() {
       </div>
       <div class="order-customer">👤 ${o.customerName||'Customer'} ${o.customerPhone?'&nbsp;📞 '+o.customerPhone:''}</div>
       <div class="order-detail">${o.orderType==='delivery'?`🛵 Delivery${o.distance?' · '+o.distance+' km':''}${o.address?' · '+o.address:''}`:'🚶 Pickup'}</div>
+      ${o.customerMapLink && o.orderType==='delivery' ? `<a href="${o.customerMapLink}" target="_blank" style="display:inline-flex;align-items:center;gap:5px;background:#E8F5E9;color:#2E7D32;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:600;text-decoration:none;margin-bottom:6px;">🗺️ Navigate to Customer</a>` : ''}
       <div class="order-items">${(o.items||[]).map(i=>`• ${i.name} × ${i.qty} = ₹${i.total}`).join('<br>')}</div>
       <div class="order-total">Total: ₹${o.total||0} ${o.deliveryCharge===0&&o.orderType==='delivery'?'<span style="color:#2E7D32;font-size:11px">FREE Delivery!</span>':''}</div>
       <div class="order-actions">
