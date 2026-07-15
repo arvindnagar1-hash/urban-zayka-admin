@@ -326,7 +326,16 @@ const PRINTNODE_API_KEY   = 'DyQsAq9AOczxV7Rz3LuMdOIIsOts8X7o4_8NpEZ7r7M';
 const ONESIGNAL_APP_ID    = '73019306-4d31-44ce-b1b0-06cc77deed70';
 const ONESIGNAL_API_KEY   = 'os_v2_app_omazgbsngfcm5mnqa3ghpxxnob2yrtokw75uci5ebzwl2a2udvh6izfaaxc7zz5dkosszkdgkzt2pdthvm6e4x6sfy3u6ywm44r4ry';
 const PRINTNODE_PRINTER_ID = 75568733;
-const CAT_EMOJIS = {'Breakfast':'🌅','Starters':'🍢','Sandwiches':'🥪','Indian Main':'🍛','Chinese':'🥢','Breads':'🫓','Meals':'🍱','Beverages':'☕'};
+const CAT_EMOJIS = {
+  'Breakfast':'🌅','Starters':'🍢','Sandwiches':'🥪','Indian Main':'🍛','Chinese':'🥢','Breads':'🫓','Meals':'🍱','Beverages':'☕',
+  'breakfast':'🌅','starters':'🍢','sandwiches':'🥪','indian':'🍛','chinese':'🥢','breads':'🫓','meals':'🍱','beverages':'☕'
+};
+const CAT_LABELS_DISPLAY = {
+  'breakfast':'Breakfast','starters':'Starters','sandwiches':'Sandwiches',
+  'indian':'Indian Main','chinese':'Chinese','breads':'Breads','meals':'Meals','beverages':'Beverages',
+  'Breakfast':'Breakfast','Starters':'Starters','Sandwiches':'Sandwiches',
+  'Indian Main':'Indian Main','Chinese':'Chinese','Breads':'Breads','Meals':'Meals','Beverages':'Beverages'
+};
 const isPaneer = n => /paneer/i.test(n);
 
 // ── FIREBASE INIT ──
@@ -659,14 +668,18 @@ function initMenu() {
 }
 
 function renderMenuAdmin() {
-  const cats = ['all',...Object.keys(CAT_EMOJIS)];
+  // Build unique cats from actual menu data
+  const allCats = [...new Set(menuItems.map(i => i.category || i.cat).filter(Boolean))];
+  const catOrder = ['breakfast','starters','sandwiches','indian','chinese','breads','meals','beverages'];
+  allCats.sort((a,b) => catOrder.indexOf(a.toLowerCase()) - catOrder.indexOf(b.toLowerCase()));
+  const cats = ['all', ...allCats];
   document.getElementById('cat-filter-bar').innerHTML = cats.map(c =>
-    `<button class="cat-pill ${menuActiveCat===c?'active':''}" onclick="setMenuCat('${c}')">${c==='all'?'All':(CAT_EMOJIS[c]||'')+' '+c}</button>`
+    `<button class="cat-pill ${menuActiveCat===c?'active':''}" onclick="setMenuCat('${c}')">${c==='all'?'All':(CAT_EMOJIS[c]||'🍽️')+' '+(CAT_LABELS_DISPLAY[c]||c)}</button>`
   ).join('');
   document.getElementById('menu-count').textContent = menuItems.length;
-  const filtered = menuActiveCat==='all'?menuItems:menuItems.filter(i=>i.cat===menuActiveCat);
+  const filtered = menuActiveCat==='all'?menuItems:menuItems.filter(i=>(i.category||i.cat)===menuActiveCat);
   const groups = {};
-  filtered.forEach(item => { if(!groups[item.cat]) groups[item.cat]=[]; groups[item.cat].push(item); });
+  filtered.forEach(item => { const c = item.category || item.cat || 'other'; if(!groups[c]) groups[c]=[]; groups[c].push(item); });
   Object.keys(groups).forEach(cat => groups[cat].sort((a,b)=>{
     const pa=isPaneer(a.name)?0:1, pb=isPaneer(b.name)?0:1;
     if(pa!==pb) return pa-pb;
@@ -674,13 +687,13 @@ function renderMenuAdmin() {
   }));
   let html='';
   Object.entries(groups).forEach(([cat,items])=>{
-    if(menuActiveCat==='all') html+=`<div class="menu-cat-title">${CAT_EMOJIS[cat]||''} ${cat}</div>`;
+    if(menuActiveCat==='all') html+=`<div class="menu-cat-title">${CAT_EMOJIS[cat]||'🍽️'} ${CAT_LABELS_DISPLAY[cat]||cat}</div>`;
     items.forEach(item=>{
       html+=`<div class="menu-item-row ${item.soldOut?'opacity:0.5':''}">
         <div class="menu-item-emoji">${item.emoji||'🍽️'}</div>
         <div class="menu-item-left">
           <div class="menu-item-name ${item.soldOut?'crossed':''}">${item.name}</div>
-          <div class="menu-item-cat">${item.cat}</div>
+          <div class="menu-item-cat">${item.category || item.cat || ""}</div>
           <div class="menu-item-price">₹${item.price}</div>
         </div>
         <div class="menu-item-controls">
@@ -718,7 +731,7 @@ function openEditModal(id) {
   editingId=id;
   document.getElementById('modal-title').textContent='✏️ Edit Item';
   document.getElementById('m-name').value=item.name;
-  document.getElementById('m-cat').value=item.cat;
+  document.getElementById('m-cat').value=item.category||item.cat||'Starters';
   document.getElementById('m-price').value=item.price;
   document.getElementById('m-emoji').value=item.emoji||'🍽️';
   document.getElementById('m-desc').value=item.desc||'';
