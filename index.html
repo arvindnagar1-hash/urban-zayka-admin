@@ -426,11 +426,40 @@ async function requestNotif() {
 }
 
 function sendNotif(title, body) {
+  // Foreground notification (app is open)
   if (Notification.permission === 'granted') {
     new Notification(title, {
       body, icon: '/icon-192.png', badge: '/icon-192.png',
       vibrate: [200,100,200,100,200], requireInteraction: true
     });
+  }
+  // Background notification via OneSignal (app is closed)
+  sendOneSignalPush(title, body);
+}
+
+async function sendOneSignalPush(title, body) {
+  try {
+    await fetch('https://api.onesignal.com/notifications', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Key ' + ONESIGNAL_API_KEY
+      },
+      body: JSON.stringify({
+        app_id: ONESIGNAL_APP_ID,
+        target_channel: 'push',
+        included_segments: ['Total Subscriptions'],
+        headings: { en: title },
+        contents: { en: body },
+        url: 'https://admin.urbanzayka.in',
+        chrome_web_icon: 'https://admin.urbanzayka.in/icon-192.png',
+        priority: 10,
+        ttl: 300
+      })
+    });
+    console.log('✅ OneSignal push sent');
+  } catch(e) {
+    console.warn('OneSignal push failed:', e.message);
   }
 }
 
