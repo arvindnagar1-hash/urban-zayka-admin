@@ -193,6 +193,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .alert-icon{font-size:28px;flex-shrink:0}
 .alert-text h4{font-size:14px;font-weight:700}
 .alert-text p{font-size:12px;opacity:.9;margin-top:2px}
+.img-upload-area{border:2px dashed #e0e0e0;border-radius:12px;padding:14px;text-align:center;cursor:pointer;margin-top:6px;background:#fafafa;min-height:80px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;transition:border-color .2s}
+.img-upload-area.has-img{border-color:var(--red)}
+.img-preview{width:100%;max-height:140px;object-fit:cover;border-radius:8px;display:block}
+.img-progress{background:#e0e0e0;border-radius:4px;height:5px;overflow:hidden;margin-top:8px;display:none}
+.img-progress-fill{background:var(--red);height:100%;border-radius:4px;width:0%;transition:width .3s}
+.img-progress-txt{font-size:11px;color:#888;margin-top:4px}
 </style>
 </head>
 <body>
@@ -326,7 +332,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
     <label>Emoji Icon</label>
     <input type="text" id="m-emoji" placeholder="e.g. 🧀" maxlength="2">
     <label>Description (optional)</label>
-    <input type="text" id="m-desc" placeholder="e.g. Tandoor grilled paneer">
+    <textarea id="m-desc" rows="2" placeholder="e.g. Dal + Sabji + Rice + Roti + Green Salad" style="width:100%;border:1.5px solid #e0e0e0;border-radius:12px;padding:12px 13px;font-size:15px;font-family:inherit;outline:none;resize:none;margin-top:0"></textarea>
     <div class="modal-btns">
       <button class="modal-cancel" onclick="closeModal()">Cancel</button>
       <button class="modal-save" onclick="saveItem()">Save Item</button>
@@ -606,6 +612,71 @@ function updateStats() {
 
 // ── MENU ──
 let menuItems=[], menuActiveCat='all', editingId=null;
+let currentImgFile=null, currentImgUrl=null;
+
+function previewImage(e) {
+  const file = e.target.files[0]; if(!file) return;
+  if(file.size > 5*1024*1024) { showToast('❌ Image too large. Max 5MB.'); return; }
+  currentImgFile = file;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    document.getElementById('img-preview').src = ev.target.result;
+    document.getElementById('img-preview-name').textContent = file.name;
+    document.getElementById('img-preview-wrap').style.display = 'block';
+    document.getElementById('img-placeholder').style.display = 'none';
+    document.getElementById('img-upload-area').classList.add('has-img');
+  };
+  reader.readAsDataURL(file);
+}
+
+function resetImageUI(existingUrl) {
+  currentImgFile = null; currentImgUrl = existingUrl || null;
+  document.getElementById('m-img').value = '';
+  document.getElementById('img-progress').style.display = 'none';
+  document.getElementById('img-progress-fill').style.width = '0%';
+  document.getElementById('img-progress-txt').textContent = '';
+  document.getElementById('img-upload-area').classList.remove('has-img');
+  if(existingUrl) {
+    document.getElementById('img-preview').src = existingUrl;
+    document.getElementById('img-preview-name').textContent = 'Current photo';
+    document.getElementById('img-preview-wrap').style.display = 'block';
+    document.getElementById('img-placeholder').style.display = 'none';
+    document.getElementById('img-upload-area').classList.add('has-img');
+  } else {
+    document.getElementById('img-preview-wrap').style.display = 'none';
+    document.getElementById('img-placeholder').style.display = 'flex';
+  }
+}
+
+async function uploadImageToCloudinary() {
+  if(!currentImgFile) return currentImgUrl;
+  return new Promise((resolve, reject) => {
+    const fd = new FormData();
+    fd.append('file', currentImgFile);
+    fd.append('upload_preset', CLOUDINARY_PRESET);
+    fd.append('folder', 'urban_zayka_menu');
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`);
+    xhr.upload.onprogress = e => {
+      if(e.lengthComputable) {
+        const pct = Math.round(e.loaded/e.total*100);
+        document.getElementById('img-progress').style.display = 'block';
+        document.getElementById('img-progress-fill').style.width = pct+'%';
+        document.getElementById('img-progress-txt').textContent = `Uploading... ${pct}%`;
+      }
+    };
+    xhr.onload = () => {
+      if(xhr.status===200) {
+        const res = JSON.parse(xhr.responseText);
+        const url = res.secure_url.replace('/upload/','/upload/f_auto,q_auto,w_400,h_400,c_fill/');
+        document.getElementById('img-progress-txt').textContent = '✅ Photo uploaded!';
+        resolve(url);
+      } else reject(new Error('Upload failed'));
+    };
+    xhr.onerror = () => reject(new Error('Network error'));
+    xhr.send(fd);
+  });
+}
 
 const DEFAULT_MENU = [
   {id:'1',name:'Plain Maggi',price:50,cat:'Breakfast',emoji:'🍜',soldOut:false},
@@ -677,14 +748,14 @@ const DEFAULT_MENU = [
 ];
 
 function initMenu() {
-  db.collection('menu').get().then(snap => {
-    if (snap.empty) {
-      const batch = db.batch();
-      DEFAULT_MENU.forEach(item => batch.set(db.collection('menu').doc(item.id), item));
-      batch.commit();
-    }
-    db.collection('menu').onSnapshot(snap => {
+  db.collection('menuItems').onSnapshot(snap => {
+    if(!snap.empty) {
       menuItems = snap.docs.map(d => ({id:d.id,...d.data()}));
+      renderMenuAdmin();
+      return;
+    }
+    db.collection('menu').onSnapshot(snap2 => {
+      menuItems = snap2.docs.map(d => ({id:d.id,...d.data()}));
       renderMenuAdmin();
     });
   });
@@ -696,9 +767,9 @@ function renderMenuAdmin() {
     `<button class="cat-pill ${menuActiveCat===c?'active':''}" onclick="setMenuCat('${c}')">${c==='all'?'All':(CAT_EMOJIS[c]||'')+' '+c}</button>`
   ).join('');
   document.getElementById('menu-count').textContent = menuItems.length;
-  const filtered = menuActiveCat==='all'?menuItems:menuItems.filter(i=>i.cat===menuActiveCat);
+  const filtered = menuActiveCat==='all'?menuItems:menuItems.filter(i=>(i.category||i.cat)===menuActiveCat);
   const groups = {};
-  filtered.forEach(item => { if(!groups[item.cat]) groups[item.cat]=[]; groups[item.cat].push(item); });
+  filtered.forEach(item => { const c=item.category||item.cat||'other'; if(!groups[c]) groups[c]=[]; groups[c].push(item); });
   Object.keys(groups).forEach(cat => groups[cat].sort((a,b)=>{
     const pa=isPaneer(a.name)?0:1, pb=isPaneer(b.name)?0:1;
     if(pa!==pb) return pa-pb;
@@ -709,7 +780,10 @@ function renderMenuAdmin() {
     if(menuActiveCat==='all') html+=`<div class="menu-cat-title">${CAT_EMOJIS[cat]||''} ${cat}</div>`;
     items.forEach(item=>{
       html+=`<div class="menu-item-row ${item.soldOut?'opacity:0.5':''}">
-        <div class="menu-item-emoji">${item.emoji||'🍽️'}</div>
+        ${item.imageUrl
+          ? `<div class="menu-item-emoji" style="width:48px;height:48px;border-radius:10px;overflow:hidden;flex-shrink:0;"><img src="${item.imageUrl}" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentNode.innerHTML='${item.emoji||'🍽️'}'"/></div>`
+          : `<div class="menu-item-emoji">${item.emoji||'🍽️'}</div>`
+        }
         <div class="menu-item-left">
           <div class="menu-item-name ${item.soldOut?'crossed':''}">${item.name}</div>
           <div class="menu-item-cat">${item.cat}</div>
@@ -728,7 +802,7 @@ function renderMenuAdmin() {
 
 function setMenuCat(cat) { menuActiveCat=cat; renderMenuAdmin(); }
 function toggleSoldOut(id,soldOut) {
-  db.collection('menu').doc(id).update({soldOut});
+  db.collection('menuItems').doc(id).update({soldOut, available: !soldOut});
   showToast(soldOut?'❌ Sold Out':'✅ Available');
 }
 
@@ -740,42 +814,74 @@ function openAddModal() {
   document.getElementById('m-price').value='';
   document.getElementById('m-emoji').value='🍽️';
   document.getElementById('m-desc').value='';
+  resetImageUI(null);
   document.getElementById('item-modal').classList.add('show');
   setTimeout(()=>document.getElementById('m-name').focus(),300);
 }
 
 function openEditModal(id) {
-  const item=menuItems.find(i=>i.id===id);
+  const item = menuItems.find(i => i.id === id);
   if(!item) return;
-  editingId=id;
-  document.getElementById('modal-title').textContent='✏️ Edit Item';
-  document.getElementById('m-name').value=item.name;
-  document.getElementById('m-cat').value=item.cat;
-  document.getElementById('m-price').value=item.price;
-  document.getElementById('m-emoji').value=item.emoji||'🍽️';
-  document.getElementById('m-desc').value=item.desc||'';
+  editingId = id;
+  const catRaw = item.category || item.cat || '';
+  const catMap = {
+    'Breakfast':'breakfast','Starters':'starters','Sandwiches':'sandwiches',
+    'Indian Main':'indian','Chinese':'chinese','Breads':'breads',
+    'Meals':'meals','Beverages':'beverages'
+  };
+  const catNorm = catMap[catRaw] || catRaw.toLowerCase().replace('indian main','indian');
+  document.getElementById('modal-title').textContent = '✏️ Edit Item';
+  document.getElementById('m-name').value  = item.name || '';
+  document.getElementById('m-cat').value   = catNorm;
+  document.getElementById('m-price').value = item.price || '';
+  document.getElementById('m-emoji').value = item.emoji || '🍽️';
+  document.getElementById('m-desc').value  = item.description || item.desc || item.sub || '';
+  resetImageUI(item.imageUrl || null);
   document.getElementById('item-modal').classList.add('show');
 }
 
 function closeModal() { document.getElementById('item-modal').classList.remove('show'); }
 
-async function saveItem() {
-  const name=document.getElementById('m-name').value.trim();
-  const cat=document.getElementById('m-cat').value;
-  const price=parseInt(document.getElementById('m-price').value);
-  const emoji=document.getElementById('m-emoji').value.trim()||'🍽️';
-  const desc=document.getElementById('m-desc').value.trim();
-  if(!name){showToast('❌ Enter item name');return;}
-  if(!price||price<0){showToast('❌ Enter valid price');return;}
-  const data={name,cat,price,emoji,desc,soldOut:false};
-  if(editingId){
-    db.collection('menu').doc(editingId).update({name,cat,price,emoji,desc});
+async async async function saveItem() {
+  const name  = document.getElementById('m-name').value.trim();
+  const cat   = document.getElementById('m-cat').value;
+  const price = parseInt(document.getElementById('m-price').value);
+  const emoji = document.getElementById('m-emoji').value.trim() || '🍽️';
+  const desc  = document.getElementById('m-desc').value.trim();
+  if(!name)  { showToast('❌ Enter item name'); return; }
+  if(!price || price < 0) { showToast('❌ Enter valid price'); return; }
+
+  const btn = document.getElementById('modal-save-btn');
+  if(btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
+
+  let imageUrl = currentImgUrl || '';
+  if(currentImgFile) {
+    if(btn) btn.textContent = 'Uploading photo...';
+    try { imageUrl = await uploadImageToCloudinary(); }
+    catch(e) { showToast('⚠️ Photo upload failed'); imageUrl = currentImgUrl || ''; }
+  }
+
+  const catMap = {
+    'breakfast':'breakfast','starters':'starters','sandwiches':'sandwiches',
+    'indian':'indian','chinese':'chinese','breads':'breads','meals':'meals','beverages':'beverages'
+  };
+  const catLower = catMap[cat.toLowerCase()] || cat.toLowerCase();
+
+  const data = {
+    name, category: catLower, cat: catLower, price, emoji,
+    description: desc, desc: desc, sub: desc,
+    imageUrl, soldOut: false, available: true, updatedAt: new Date()
+  };
+
+  if(editingId) {
+    db.collection('menuItems').doc(editingId).update(data);
     showToast(`✅ ${name} updated!`);
   } else {
-    const newId=Date.now().toString();
-    db.collection('menu').doc(newId).set({id:newId,...data});
+    data.createdAt = new Date();
+    db.collection('menuItems').add(data);
     showToast(`✅ ${name} added!`);
   }
+  if(btn) { btn.disabled = false; btn.textContent = 'Save Item'; }
   closeModal();
 }
 
@@ -785,7 +891,7 @@ function confirmDelete(type,id,label) {
   document.getElementById('confirm-title').textContent=type==='order'?`Delete Order?`:`Delete "${label}"?`;
   document.getElementById('confirm-msg').textContent=type==='order'?`Order from ${label} will be deleted.`:`This menu item will be permanently deleted.`;
   document.getElementById('confirm-ok-btn').onclick=async()=>{
-    const col=pendingDeleteType==='order'?'orders':'menu';
+    const col=pendingDeleteType==='order'?'orders':'menuItems';
     await db.collection(col).doc(pendingDeleteId).delete();
     showToast('🗑️ Deleted');
     closeConfirm();
