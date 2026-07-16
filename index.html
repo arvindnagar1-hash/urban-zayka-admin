@@ -12,7 +12,6 @@
 <title>Urban ज़ायका — Admin</title>
 
 <!-- OneSignal Web Push SDK -->
-  
 <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
 <script>
   window.OneSignalDeferred = window.OneSignalDeferred || [];
@@ -54,7 +53,6 @@ document.addEventListener('DOMContentLoaded', () => {
   if (localStorage.getItem('uzAdmin') || sessionStorage.getItem('uzAdmin')) {
     document.getElementById('login-page').style.display = 'none';
     document.getElementById('dashboard').style.display = 'flex';
-    // initApp called after Firebase loads below
   }
 });
 </script>
@@ -160,6 +158,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .soldout-toggle.soldout{background:#FFEBEE;color:#C62828;border-color:#FFCDD2}
 .edit-btn{background:#EEF2FF;color:#3730a3;border:none;border-radius:8px;padding:6px 9px;font-size:12px;cursor:pointer;font-family:inherit}
 .delete-menu-btn{background:#FFEBEE;color:#C62828;border:none;border-radius:8px;padding:6px 9px;font-size:12px;cursor:pointer;font-family:inherit}
+
+.img-upload-area{border:2px dashed #e0e0e0;border-radius:12px;padding:16px;text-align:center;cursor:pointer;margin-top:6px;background:#fafafa;transition:all .2s}
+.img-upload-area.has-img{border-style:solid;border-color:var(--red);background:#fff}
+.img-preview{max-height:120px;border-radius:8px;object-fit:cover;margin:0 auto}
+.img-progress{height:4px;background:#eee;border-radius:2px;margin-top:8px;overflow:hidden;display:none}
+.img-progress-fill{height:100%;background:var(--red);width:0%;transition:width .2s}
+.img-progress-txt{font-size:11px;color:#888;margin-top:4px;text-align:center}
 
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;display:none;align-items:flex-end;justify-content:center}
 .modal-overlay.show{display:flex}
@@ -380,7 +385,7 @@ function initApp() {
   initMenu();
 }
 
-// Auto-login after Firebase ready
+// Auto-login check after Firebase is ready
 if (localStorage.getItem('uzAdmin') || sessionStorage.getItem('uzAdmin')) {
   initApp();
 }
@@ -481,6 +486,9 @@ function listenOrders() {
 
     renderOrders();
     updateStats();
+  }, err => {
+    console.error("Firestore Orders Listener Error:", err);
+    document.getElementById('orders-list').innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><p>Error loading orders. Check permissions/connection.</p></div>`;
   });
 }
 
@@ -546,7 +554,7 @@ function printOrder(id) {
   const t = o.createdAt ? o.createdAt.toDate() : new Date();
 
   let txt = '';
-  txt += '      Urban Zayka\n';
+  txt += '     Urban Zayka\n';
   txt += '   Met City, Haryana\n';
   txt += '   Ph: 8860609555\n';
   txt += dline+'\n';
@@ -567,7 +575,7 @@ function printOrder(id) {
   if (o.deliveryCharge>0) txt += pad('Delivery',`Rs.${o.deliveryCharge}`)+'\n';
   else if (o.orderType==='delivery') txt += pad('Delivery','FREE')+'\n';
   txt += dline+'\n'+pad('TOTAL',`Rs.${o.total||0}`)+'\n'+dline+'\n';
-  txt += '\n   Thank you for ordering!\n     urbanzayka.in\n\n\n\n';
+  txt += '\n   Thank you for ordering!\n      urbanzayka.in\n\n\n\n';
 
   const bytes = new TextEncoder().encode(txt);
   const b64 = btoa(String.fromCharCode(...bytes));
@@ -760,13 +768,12 @@ function initMenu() {
   db.collection('menuItems').onSnapshot(snap => {
     if (snap.empty) {
       const batch = db.batch();
-      DEFAULT_MENU.forEach(item => batch.set(db.collection('menu').doc(item.id), item));
+      DEFAULT_MENU.forEach(item => batch.set(db.collection('menuItems').doc(item.id), item));
       batch.commit();
-    }
-    db.collection('menu').onSnapshot(snap => {
-      menuItems = snap.docs.map(d => ({id:d.id,...d.data()}));
+    } else {
+      menuItems = snap.docs.map(d => ({id:d.id, ...d.data()}));
       renderMenuAdmin();
-    });
+    }
   });
 }
 
@@ -776,9 +783,13 @@ function renderMenuAdmin() {
     `<button class="cat-pill ${menuActiveCat===c?'active':''}" onclick="setMenuCat('${c}')">${c==='all'?'All':(CAT_EMOJIS[c]||'')+' '+c}</button>`
   ).join('');
   document.getElementById('menu-count').textContent = menuItems.length;
-  const filtered = menuActiveCat==='all'?menuItems:menuItems.filter(i=>i.cat===menuActiveCat);
+  const filtered = menuActiveCat==='all'?menuItems:menuItems.filter(i=>(i.cat===menuActiveCat || i.category===menuActiveCat.toLowerCase()));
   const groups = {};
-  filtered.forEach(item => { if(!groups[item.cat]) groups[item.cat]=[]; groups[item.cat].push(item); });
+  filtered.forEach(item => { 
+    const catName = item.cat || item.category || 'Other';
+    if(!groups[catName]) groups[catName]=[]; 
+    groups[catName].push(item); 
+  });
   Object.keys(groups).forEach(cat => groups[cat].sort((a,b)=>{
     const pa=isPaneer(a.name)?0:1, pb=isPaneer(b.name)?0:1;
     if(pa!==pb) return pa-pb;
@@ -807,6 +818,7 @@ function renderMenuAdmin() {
 }
 
 function setMenuCat(cat) { menuActiveCat=cat; renderMenuAdmin(); }
+
 function toggleSoldOut(id,soldOut) {
   db.collection('menuItems').doc(id).update({soldOut, available: !soldOut});
   showToast(soldOut?'❌ Sold Out':'✅ Available');
@@ -816,7 +828,7 @@ function openAddModal() {
   editingId=null;
   document.getElementById('modal-title').textContent='➕ Add New Item';
   document.getElementById('m-name').value='';
-  document.getElementById('m-cat').value='Starters';
+  document.getElementById('m-cat').value='starters';
   document.getElementById('m-price').value='';
   document.getElementById('m-emoji').value='🍽️';
   document.getElementById('m-desc').value='';
@@ -837,8 +849,8 @@ function openEditModal(id) {
   };
   const catNorm = catMap[catRaw] || catRaw.toLowerCase().replace('indian main','indian');
   document.getElementById('modal-title').textContent = '✏️ Edit Item';
-  document.getElementById('m-name').value  = item.name || '';
-  document.getElementById('m-cat').value   = catNorm;
+  document.getElementById('m-name').value   = item.name || '';
+  document.getElementById('m-cat').value    = catNorm;
   document.getElementById('m-price').value = item.price || '';
   document.getElementById('m-emoji').value = item.emoji || '🍽️';
   document.getElementById('m-desc').value  = item.description || item.desc || item.sub || '';
