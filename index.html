@@ -169,6 +169,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .badge-active{background:#E8F5E9;color:#2E7D32}
 .badge-inactive{background:#FFEBEE;color:#C62828}
 .member-actions{display:flex;gap:6px;flex-shrink:0}
+.pending-section-title{font-size:11px;font-weight:700;color:#F57F17;text-transform:uppercase;letter-spacing:.5px;border-left:3px solid #F57F17;padding-left:8px;margin:12px 0 8px}
+.active-section-title{font-size:11px;font-weight:700;color:#2E7D32;text-transform:uppercase;letter-spacing:.5px;border-left:3px solid #2E7D32;padding-left:8px;margin:12px 0 8px}
+.approve-btn{background:#E8F5E9;color:#2E7D32;border:none;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit}
+.member-card.pending{border-left:3px solid #F57F17;background:#FFFDE7}
 .img-upload-area{border:2px dashed #e0e0e0;border-radius:12px;padding:16px;text-align:center;cursor:pointer;margin-top:6px;background:#fafafa;transition:all .2s}
 .img-upload-area.has-img{border-style:solid;border-color:var(--red);background:#fff}
 .img-preview{max-height:120px;border-radius:8px;object-fit:cover;margin:0 auto}
@@ -328,6 +332,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
     <button class="nav-item" id="nav-members" onclick="showPane('members')">
       <div class="nav-icon">🏠</div>
       <div class="nav-label">Members</div>
+      <div class="nav-badge" id="pending-badge" style="display:none">0</div>
     </button>
   </div>
 </div>
@@ -1107,29 +1112,51 @@ function initMembers() {
 }
 
 function renderMembers() {
+  const pending = allMembers.filter(m => m.active === false || m.active === 'false');
+  const active  = allMembers.filter(m => m.active === true  || m.active === 'true');
+
+  // Update pending badge on nav
+  const pb = document.getElementById('pending-badge');
+  if(pb) { pb.textContent=pending.length; pb.style.display=pending.length>0?'flex':'none'; }
+
   document.getElementById('member-count').textContent = allMembers.length;
   const el = document.getElementById('members-list');
+
   if(!allMembers.length) {
-    el.innerHTML = '<div class="empty-state"><div class="empty-icon">🏠</div><p>No members yet. Add room guests.</p></div>';
+    el.innerHTML = '<div class="empty-state"><div class="empty-icon">🏠</div><p>No members yet.</p></div>';
     return;
   }
-  el.innerHTML = allMembers.map(m => {
+
+  const memberCard = (m, isPending) => {
     const initials = m.name ? m.name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2) : '?';
-    const active = m.active === true || m.active === 'true';
-    return `<div class="member-card">
-      <div class="member-avatar">${initials}</div>
+    return `<div class="member-card ${isPending?'pending':''}">
+      <div class="member-avatar" style="${isPending?'background:#FFF8E1;color:#F57F17':''}">${initials}</div>
       <div class="member-info">
         <div class="member-name">${m.name||'Guest'}</div>
         <div class="member-room">🏠 Room ${m.roomNumber||'—'}</div>
         <div class="member-phone">📞 ${m.phone||'—'}</div>
       </div>
-      <span class="member-status-badge ${active?'badge-active':'badge-inactive'}">${active?'✅ Active':'❌ Inactive'}</span>
+      ${isPending
+        ? `<button class="approve-btn" onclick="approveMember('${m.id}','${m.name||'Guest'}')">✅ Approve</button>`
+        : `<span class="member-status-badge badge-active">✅ Active</span>`
+      }
       <div class="member-actions">
-        <button class="edit-btn" onclick="openEditMemberModal('${m.id}')">✏️</button>
+        ${!isPending?`<button class="edit-btn" onclick="openEditMemberModal('${m.id}')">✏️</button>`:''}
         <button class="delete-menu-btn" onclick="confirmDelete('member','${m.id}','${m.name||'Member'}')">🗑️</button>
       </div>
     </div>`;
-  }).join('');
+  };
+
+  let html = '';
+  if(pending.length) {
+    html += `<div class="pending-section-title">⏳ Pending Approval (${pending.length})</div>`;
+    html += pending.map(m => memberCard(m, true)).join('');
+  }
+  if(active.length) {
+    html += `<div class="active-section-title">✅ Active Members (${active.length})</div>`;
+    html += active.map(m => memberCard(m, false)).join('');
+  }
+  el.innerHTML = html;
 }
 
 function openAddMemberModal() {
@@ -1156,6 +1183,11 @@ function openEditMemberModal(id) {
 }
 
 function closeMemberModal() { document.getElementById('member-modal').classList.remove('show'); }
+
+function approveMember(id, name) {
+  db.collection('members').doc(id).update({ active: true, approvedAt: new Date() });
+  showToast('✅ ' + name + ' approved!');
+}
 
 function saveMember() {
   const name  = document.getElementById('mb-name').value.trim();
