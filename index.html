@@ -350,8 +350,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
       <option value="meals">🍱 Meals</option>
       <option value="beverages">☕ Beverages</option>
     </select>
-    <label>Price (₹)</label>
+    <label>Regular Price (₹)</label>
     <input type="number" id="m-price" placeholder="e.g. 250" min="0">
+    <label>Room Price (₹) <span style="font-weight:400;color:#aaa;text-transform:none">— optional, for room members</span></label>
+    <input type="number" id="m-room-price" placeholder="e.g. 200 (leave blank if no room discount)" min="0">
     <label>Emoji Icon</label>
     <input type="text" id="m-emoji" placeholder="e.g. 🧀" maxlength="2">
     <label>Description (optional)</label>
@@ -1003,7 +1005,7 @@ function renderMenuAdmin() {
         <div class="menu-item-left">
           <div class="menu-item-name ${item.soldOut?'crossed':''}">${item.name}</div>
           <div class="menu-item-cat">${item.category || item.cat || ''}</div>
-          <div class="menu-item-price">₹${item.price}</div>
+          <div class="menu-item-price">₹${item.price}${item.roomPrice&&item.roomPrice<item.price?' <span style="font-size:10px;color:#2E7D32;font-weight:600">Room ₹'+item.roomPrice+'</span>':''}</div>
         </div>
         <div class="menu-item-controls">
           <button class="soldout-toggle ${item.soldOut?'soldout':''}" onclick="toggleSoldOut('${item.id}',${!item.soldOut})">${item.soldOut?'Sold Out':'Available'}</button>
@@ -1029,6 +1031,7 @@ function openAddModal() {
   document.getElementById('m-name').value='';
   document.getElementById('m-cat').value='starters';
   document.getElementById('m-price').value='';
+  document.getElementById('m-room-price').value='';
   document.getElementById('m-emoji').value='🍽️';
   document.getElementById('m-desc').value='';
   resetImageUI(null);
@@ -1051,6 +1054,7 @@ function openEditModal(id) {
   document.getElementById('m-name').value   = item.name || '';
   document.getElementById('m-cat').value    = catNorm;
   document.getElementById('m-price').value = item.price || '';
+  document.getElementById('m-room-price').value = item.roomPrice || '';
   document.getElementById('m-emoji').value = item.emoji || '🍽️';
   document.getElementById('m-desc').value  = item.description || item.desc || item.sub || '';
   resetImageUI(item.imageUrl || null);
@@ -1077,7 +1081,9 @@ async function saveItem() {
   }
   const catMap = {'breakfast':'breakfast','starters':'starters','sandwiches':'sandwiches','indian':'indian','chinese':'chinese','breads':'breads','meals':'meals','beverages':'beverages'};
   const catLower = catMap[cat.toLowerCase()] || cat.toLowerCase();
-  const data = { name, category:catLower, cat:catLower, price, emoji, description:desc, desc:desc, sub:desc, imageUrl, soldOut:false, available:true, updatedAt:new Date() };
+  const roomPriceRaw = parseInt(document.getElementById('m-room-price').value)||0;
+  const roomPrice = (roomPriceRaw>0 && roomPriceRaw<price) ? roomPriceRaw : 0;
+  const data = { name, category:catLower, cat:catLower, price, roomPrice, emoji, description:desc, desc:desc, sub:desc, imageUrl, soldOut:false, available:true, updatedAt:new Date() };
   if(editingId) {
     db.collection('menuItems').doc(editingId).update(data);
     showToast(`✅ ${name} updated!`);
