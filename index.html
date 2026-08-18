@@ -159,6 +159,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .edit-btn{background:#EEF2FF;color:#3730a3;border:none;border-radius:8px;padding:6px 9px;font-size:12px;cursor:pointer;font-family:inherit}
 .delete-menu-btn{background:#FFEBEE;color:#C62828;border:none;border-radius:8px;padding:6px 9px;font-size:12px;cursor:pointer;font-family:inherit}
 
+.member-card{background:#fff;border-radius:14px;padding:14px;margin-bottom:10px;border:1px solid #eee;display:flex;align-items:center;gap:12px}
+.member-avatar{width:42px;height:42px;border-radius:50%;background:#E3F2FD;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#1565C0;flex-shrink:0}
+.member-info{flex:1}
+.member-name{font-size:14px;font-weight:600;color:#1a1a1a}
+.member-room{font-size:12px;color:#888;margin-top:2px}
+.member-phone{font-size:12px;color:#555;margin-top:2px}
+.member-status-badge{font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;white-space:nowrap;flex-shrink:0}
+.badge-active{background:#E8F5E9;color:#2E7D32}
+.badge-inactive{background:#FFEBEE;color:#C62828}
+.member-actions{display:flex;gap:6px;flex-shrink:0}
 .img-upload-area{border:2px dashed #e0e0e0;border-radius:12px;padding:16px;text-align:center;cursor:pointer;margin-top:6px;background:#fafafa;transition:all .2s}
 .img-upload-area.has-img{border-style:solid;border-color:var(--red);background:#fff}
 .img-preview{max-height:120px;border-radius:8px;object-fit:cover;margin:0 auto}
@@ -280,6 +290,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
     </div>
   </div>
 
+  <div class="pane" id="pane-members">
+    <div class="menu-wrap">
+      <div class="menu-top-bar">
+        <h3>Room Members (<span id="member-count">0</span>)</h3>
+        <button class="add-item-btn" onclick="openAddMemberModal()">➕ Add Member</button>
+      </div>
+      <div id="members-list"><div class="empty-state"><div class="empty-icon">⏳</div><p>Loading...</p></div></div>
+    </div>
+  </div>
+
   <div class="pane" id="pane-menu">
     <div class="menu-wrap">
       <div class="menu-top-bar">
@@ -304,6 +324,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
     <button class="nav-item" id="nav-menu" onclick="showPane('menu')">
       <div class="nav-icon">🍽️</div>
       <div class="nav-label">Menu</div>
+    </button>
+    <button class="nav-item" id="nav-members" onclick="showPane('members')">
+      <div class="nav-icon">🏠</div>
+      <div class="nav-label">Members</div>
     </button>
   </div>
 </div>
@@ -356,6 +380,29 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
   </div>
 </div>
 
+<!-- MEMBER MODAL -->
+<div class="modal-overlay" id="member-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3 id="member-modal-title">Add Room Member</h3>
+    <label>Guest Name</label>
+    <input type="text" id="mb-name" placeholder="e.g. Rahul Sharma">
+    <label>Phone Number</label>
+    <input type="tel" id="mb-phone" placeholder="10-digit mobile number" maxlength="10">
+    <label>Room Number</label>
+    <input type="text" id="mb-room" placeholder="e.g. 101">
+    <label>Status</label>
+    <select id="mb-status">
+      <option value="true">✅ Active</option>
+      <option value="false">❌ Inactive</option>
+    </select>
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closeMemberModal()">Cancel</button>
+      <button class="modal-save" id="member-save-btn" onclick="saveMember()">Save Member</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const PRINTNODE_API_KEY   = 'DyQsAq9AOczxV7Rz3LuMdOIIsOts8X7o4_8NpEZ7r7M';
 const CLOUDINARY_CLOUD    = 'dgmm5oop3';
@@ -383,6 +430,7 @@ function initApp() {
   document.getElementById('dashboard').addEventListener('click', unlockAudio, {passive:true});
   listenOrders();
   initMenu();
+  initMembers();
 }
 
 // Auto-login check after Firebase is ready
@@ -473,6 +521,7 @@ function listenOrders() {
       const newest = allOrders[0];
       playRing();
       sendNotif('🔔 New Order!', `#${newest.orderId} from ${newest.customerName} — ₹${newest.total}`);
+      setTimeout(() => printOrder(newest.id), 2000);
       document.getElementById('alert-desc').textContent = `#${newest.orderId} · ${newest.customerName} · ₹${newest.total}`;
       const al = document.getElementById('new-order-alert');
       al.classList.add('show');
@@ -544,62 +593,212 @@ function openWA(phone, orderId) {
 }
 
 // ── PRINT ──
+// ── PRINT HELPERS ──
+const TANDOOR_ITEMS = ["malai chaap","paneer tikka","paneer malai tikka","afghani paneer tikka","tandoori naan","butter naan","garlic naan","tandoori roti","tandoori butter roti","aloo pyaz kulcha","aloo kulcha","paneer kulcha","chaap","tikka","naan","kulcha"];
+
+const CAT_HINDI = {"breakfast":"नाश्ता","starters":"स्टार्टर","sandwiches":"सैंडविच","indian":"मेन कोर्स","chinese":"चाइनीज़","breads":"ब्रेड","meals":"मील्स","beverages":"पेय"};
+const CAT_EMOJI_KOT = {"breakfast":"[सुबह]","starters":"[नाश्ता]","sandwiches":"[सैंडविच]","indian":"[मेन]","chinese":"[चाइनीज]","breads":"[ब्रेड]","meals":"[मील]","beverages":"[पेय]"};
+
+const HINDI_NAMES = {
+  "paneer tikka":"पनीर टिक्का","malai chaap":"मलाई चाप","dal makhani":"दाल मखनी",
+  "office thali":"ऑफिस थाली","veg biryani":"वेज बिरयानी","aloo paratha":"आलू पराठा",
+  "tea":"चाय","coffee":"कॉफी","chole bature":"छोले भटूरे","butter naan":"बटर नान",
+  "garlic naan":"गार्लिक नान","paneer butter masala":"पनीर बटर मसाला",
+  "veg hakka noodles":"हक्का नूडल्स","fried rice":"फ्राइड राइस",
+  "paneer burji":"पनीर भुर्जी","aloo pyaz paratha":"आलू प्याज पराठा",
+  "plain maggi":"प्लेन मैगी","veg maggi":"वेज मैगी","samosa":"समोसा",
+  "samosa + chole":"समोसा + छोले","aloo tikki":"आलू टिक्की","special thali":"स्पेशल थाली"
+};
+
+function hasTandoor(items) {
+  return (items||[]).some(i => TANDOOR_ITEMS.some(t => (i.name||'').toLowerCase().includes(t)));
+}
+
+function fmtDateTime(ts) {
+  const d = ts && ts.toDate ? ts.toDate() : new Date();
+  const date = d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+  const time = d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true}).toUpperCase();
+  return {date, time, d};
+}
+
+function getReadyTime(ts, isTandoor) {
+  const d = ts && ts.toDate ? ts.toDate() : new Date();
+  const mins = isTandoor ? 40 : 30;
+  const ready = new Date(d.getTime() + mins * 60000);
+  return ready.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true}).toUpperCase();
+}
+
+function pad(l, r, w=32) { return l + ' '.repeat(Math.max(1, w-l.length-r.length)) + r; }
+
+function buildInvoice(o) {
+  const isRoom = o.orderType === 'room';
+  const {date, time} = fmtDateTime(o.createdAt);
+  const LINE = '================================\n';
+  const DASH = '--------------------------------\n';
+  let t = '';
+
+  t += '       URBAN ZAYKA\n';
+  t += '    Met City, Haryana\n';
+  t += '    Ph: 8860609555\n';
+  t += LINE;
+  if(isRoom) t += '      *** ROOM SERVICE ***\n';
+  t += 'ORDER: #' + (o.orderId||o.id||'—') + '\n';
+  t += 'Date : ' + date + '  ' + time + '\n';
+
+  if(isRoom) {
+    t += 'Room : ' + (o.roomNumber||'—') + '\n';
+    t += 'Guest: ' + (o.customerName||'—') + '\n';
+    t += 'Phone: ' + (o.customerPhone||'—') + '\n';
+  } else if(o.orderType==='delivery') {
+    t += 'Type : DELIVERY';
+    if(o.distance) t += ' — ' + o.distance + ' km';
+    t += '\n';
+    t += 'Name : ' + (o.customerName||'—') + '\n';
+    t += 'Ph   : ' + (o.customerPhone||'—') + '\n';
+    if(o.address) t += 'Addr : ' + o.address + '\n';
+    if(o.company) t += 'Co.  : ' + o.company + (o.empId?' ('+o.empId+')':'') + '\n';
+  } else {
+    t += 'Type : PICKUP\n';
+    t += 'Name : ' + (o.customerName||'—') + '\n';
+    t += 'Ph   : ' + (o.customerPhone||'—') + '\n';
+  }
+
+  t += LINE;
+
+  const items = o.items || [];
+
+  if(isRoom) {
+    // Room invoice — REG and ROOM price
+    t += 'ITEM            QTY  REG    ROOM\n';
+    t += LINE;
+    let regTotal = 0, roomTotal = 0;
+    items.forEach(item => {
+      const name = (item.name||'Item').substring(0,14).padEnd(14);
+      const qty = String(item.qty||1).padStart(3);
+      const reg = item.regularPrice||item.price||0;
+      const room = item.roomPrice||item.price||0;
+      regTotal += reg * (item.qty||1);
+      roomTotal += room * (item.qty||1);
+      t += name + qty + '  Rs.' + String(reg).padEnd(5) + 'Rs.' + room + '\n';
+    });
+    const saved = regTotal - roomTotal;
+    t += LINE;
+    t += ' 1. Regular Price'.padEnd(24) + 'Rs.' + regTotal + '\n';
+    t += ' 2. Room Discount'.padEnd(24) + '-Rs.' + saved + '\n';
+    t += DASH;
+    t += '    ROOM TOTAL'.padEnd(24) + 'Rs.' + roomTotal + '\n';
+  } else {
+    // Regular invoice
+    t += 'ITEM                     QTY   AMT\n';
+    t += LINE;
+    let subtotal = 0;
+    items.forEach(item => {
+      const nq = (item.name||'Item') + ' x' + (item.qty||1);
+      const amt = 'Rs.' + (item.total||((item.price||0)*(item.qty||1)));
+      subtotal += (item.total||((item.price||0)*(item.qty||1)));
+      t += (nq.length+amt.length>=31) ? nq.substring(0,32)+'\n'+pad('',amt)+'\n' : pad(nq,amt)+'\n';
+    });
+    t += DASH;
+    t += pad('Subtotal','Rs.'+subtotal) + '\n';
+    if(o.deliveryCharge>0) t += pad('Delivery','Rs.'+o.deliveryCharge) + '\n';
+    else if(o.orderType==='delivery') t += pad('Delivery','FREE') + '\n';
+    if(o.corporateDiscount>0) t += pad('Corp. Discount','-Rs.'+o.corporateDiscount) + '\n';
+    t += LINE;
+    t += pad('TOTAL','Rs.'+(o.total||subtotal)) + '\n';
+  }
+
+  t += LINE;
+  t += '  Thank you — Urban Zayka\n';
+  t += '     urbanzayka.in\n';
+  t += '\n\n\n';
+  t += '\x1D\x56\x00'; // CUT
+  return t;
+}
+
+function buildKOT(o) {
+  const isRoom = o.orderType === 'room';
+  const isTandoor = hasTandoor(o.items);
+  const tat = isTandoor ? 40 : 30;
+  const {date, time} = fmtDateTime(o.createdAt);
+  const readyTime = getReadyTime(o.createdAt, isTandoor);
+  const LINE = '================================\n';
+  const DASH = '--------------------------------\n';
+  const items = o.items || [];
+  let t = '';
+
+  t += '  !! KITCHEN ORDER TICKET !!\n';
+  t += '  !! किचन आर्डर टिकट !!\n';
+  t += LINE;
+  t += '#' + (o.orderId||o.id||'—') + '    ' + time + '\n';
+
+  if(isRoom) {
+    t += '** रूम सर्विस / ROOM SERVICE **\n';
+    t += '   Room ' + (o.roomNumber||'—') + ' | ' + (o.customerName||'Guest') + '\n';
+  } else if(o.orderType==='delivery') {
+    t += '** डिलीवरी / DELIVERY **\n';
+    t += '   ' + (o.customerName||'—') + '\n';
+  } else {
+    t += '** पिकअप / PICKUP **\n';
+    t += '   ' + (o.customerName||'—') + '\n';
+  }
+
+  t += DASH;
+  t += '>> तैयार करें / READY BY: ' + readyTime + '\n';
+  t += '   (' + tat + ' मिनट / mins)' + (isTandoor ? '  !! TANDOOR !!' : '') + '\n';
+  t += LINE;
+
+  // Group by category
+  const groups = {};
+  items.forEach(item => {
+    const cat = (item.category||item.cat||'other').toLowerCase();
+    if(!groups[cat]) groups[cat] = [];
+    groups[cat].push(item);
+  });
+
+  Object.entries(groups).forEach(([cat, catItems]) => {
+    const emoji = CAT_EMOJI_KOT[cat] || '[आइटम]';
+    const hindi = CAT_HINDI[cat] || cat;
+    t += '\n' + emoji + ' ' + hindi + ' / ' + cat.toUpperCase() + '\n';
+    t += DASH;
+    catItems.forEach(item => {
+      const isTandoorItem = TANDOOR_ITEMS.some(td => (item.name||'').toLowerCase().includes(td));
+      const hindiName = HINDI_NAMES[(item.name||'').toLowerCase()] || item.name;
+      t += ' [' + (item.qty||1) + '] ' + (item.name||'Item') + (isTandoorItem?' !! TANDOOR':'') + '\n';
+      t += '       ' + hindiName + '\n';
+    });
+  });
+
+  t += '\n' + LINE;
+  const totalQty = items.reduce((s,i)=>s+(i.qty||1),0);
+  t += 'कुल / TOTAL ITEMS: ' + totalQty + '\n';
+  t += 'तैयार समय / READY: ' + readyTime + '\n';
+  if(isTandoor) t += '!! तंदूर आर्डर है / TANDOOR ORDER !!\n';
+  t += LINE;
+  t += '\n\n\n';
+  t += '\x1D\x56\x00'; // CUT
+  return t;
+}
+
 function printOrder(id) {
   const o = allOrders.find(x => x.id===id);
   if (!o) return;
-  showToast('🖨️ Sending to printer...');
-  const line  = '--------------------------------';
-  const dline = '================================';
-  const pad = (l,r,w=32) => l + ' '.repeat(Math.max(1,w-l.length-r.length)) + r;
-  const t = o.createdAt ? o.createdAt.toDate() : new Date();
-
-  let txt = '';
-  txt += '     Urban Zayka\n';
-  txt += '   Met City, Haryana\n';
-  txt += '   Ph: 8860609555\n';
-  txt += dline+'\n';
-  txt += `Order: #${o.orderId||o.id.slice(-6).toUpperCase()}\n`;
-  txt += `Date : ${t.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})} ${t.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}\n`;
-  txt += `Type : ${o.orderType==='delivery'?'Delivery':'Pickup'}\n`;
-  txt += `Name : ${o.customerName||'Customer'}\n`;
-  if (o.customerPhone) txt += `Phone: ${o.customerPhone}\n`;
-  if (o.orderType==='delivery'&&o.address) txt += `Addr : ${o.address}\n`;
-  txt += line+'\n'+pad('ITEM','AMT')+'\n'+line+'\n';
-  (o.items||[]).forEach(item => {
-    const nq = `${item.name} x${item.qty}`;
-    const pr = `Rs.${item.total}`;
-    txt += (nq.length+pr.length>=31) ? nq.substring(0,32)+'\n'+pad('',pr)+'\n' : pad(nq,pr)+'\n';
-  });
-  txt += line+'\n';
-  txt += pad('Subtotal',`Rs.${o.subtotal||0}`)+'\n';
-  if (o.deliveryCharge>0) txt += pad('Delivery',`Rs.${o.deliveryCharge}`)+'\n';
-  else if (o.orderType==='delivery') txt += pad('Delivery','FREE')+'\n';
-  txt += dline+'\n'+pad('TOTAL',`Rs.${o.total||0}`)+'\n'+dline+'\n';
-  txt += '\n   Thank you for ordering!\n      urbanzayka.in\n\n\n\n';
-
-  const bytes = new TextEncoder().encode(txt);
-  const b64 = btoa(String.fromCharCode(...bytes));
-
+  showToast('🖨️ Printing Invoice + KOT...');
+  const invoice = buildInvoice(o);
+  const kot = buildKOT(o);
+  const combined = invoice + kot;
+  function toB64(str) {
+    const bytes = new TextEncoder().encode(str);
+    let bin = ''; bytes.forEach(b => bin += String.fromCharCode(b));
+    return btoa(bin);
+  }
   fetch('https://api.printnode.com/printjobs', {
-    method:'POST',
-    headers:{
-      'Authorization':'Basic '+btoa(PRINTNODE_API_KEY+':'),
-      'Content-Type':'application/json'
-    },
-    body: JSON.stringify({
-      printerId: PRINTNODE_PRINTER_ID,
-      title: `Order #${o.orderId||o.id.slice(-6)}`,
-      contentType: 'raw_base64',
-      content: b64,
-      source: 'Urban Zayka Admin'
-    })
+    method: 'POST',
+    headers: { 'Authorization': 'Basic '+btoa(PRINTNODE_API_KEY+':'), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ printerId: PRINTNODE_PRINTER_ID, title: 'Order #'+(o.orderId||o.id.slice(-6)), contentType: 'raw_base64', content: toB64(combined), source: 'Urban Zayka Admin' })
   }).then(r => {
-    if (r.ok) { r.json().then(j => showToast(`✅ Printing! Job #${j}`)); }
-    else { r.text().then(e => { console.error(e); showToast('❌ Print failed — is printer on?'); }); }
-  }).catch(e => {
-    console.error(e);
-    showToast('❌ Cannot reach PrintNode');
-  });
+    if(r.ok) r.json().then(j => showToast('✅ Invoice + KOT printing! Job #'+j));
+    else r.text().then(e => showToast('❌ Print failed'));
+  }).catch(() => showToast('❌ Cannot reach PrintNode'));
 }
 
 // ── STATS ──
@@ -891,13 +1090,94 @@ async function saveItem() {
   closeModal();
 }
 
+// ── MEMBERS ──
+let allMembers = [], editingMemberId = null;
+
+function initMembers() {
+  db.collection('members').onSnapshot(snap => {
+    allMembers = snap.docs.map(d => ({id:d.id,...d.data()}));
+    renderMembers();
+  });
+}
+
+function renderMembers() {
+  document.getElementById('member-count').textContent = allMembers.length;
+  const el = document.getElementById('members-list');
+  if(!allMembers.length) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-icon">🏠</div><p>No members yet. Add room guests.</p></div>';
+    return;
+  }
+  el.innerHTML = allMembers.map(m => {
+    const initials = m.name ? m.name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2) : '?';
+    const active = m.active === true || m.active === 'true';
+    return `<div class="member-card">
+      <div class="member-avatar">${initials}</div>
+      <div class="member-info">
+        <div class="member-name">${m.name||'Guest'}</div>
+        <div class="member-room">🏠 Room ${m.roomNumber||'—'}</div>
+        <div class="member-phone">📞 ${m.phone||'—'}</div>
+      </div>
+      <span class="member-status-badge ${active?'badge-active':'badge-inactive'}">${active?'✅ Active':'❌ Inactive'}</span>
+      <div class="member-actions">
+        <button class="edit-btn" onclick="openEditMemberModal('${m.id}')">✏️</button>
+        <button class="delete-menu-btn" onclick="confirmDelete('member','${m.id}','${m.name||'Member'}')">🗑️</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openAddMemberModal() {
+  editingMemberId = null;
+  document.getElementById('member-modal-title').textContent = '➕ Add Room Member';
+  document.getElementById('mb-name').value = '';
+  document.getElementById('mb-phone').value = '';
+  document.getElementById('mb-room').value = '';
+  document.getElementById('mb-status').value = 'true';
+  document.getElementById('member-modal').classList.add('show');
+  setTimeout(()=>document.getElementById('mb-name').focus(),300);
+}
+
+function openEditMemberModal(id) {
+  const m = allMembers.find(x => x.id===id);
+  if(!m) return;
+  editingMemberId = id;
+  document.getElementById('member-modal-title').textContent = '✏️ Edit Room Member';
+  document.getElementById('mb-name').value = m.name||'';
+  document.getElementById('mb-phone').value = m.phone||'';
+  document.getElementById('mb-room').value = m.roomNumber||'';
+  document.getElementById('mb-status').value = (m.active===true||m.active==='true')?'true':'false';
+  document.getElementById('member-modal').classList.add('show');
+}
+
+function closeMemberModal() { document.getElementById('member-modal').classList.remove('show'); }
+
+function saveMember() {
+  const name  = document.getElementById('mb-name').value.trim();
+  const phone = document.getElementById('mb-phone').value.trim();
+  const room  = document.getElementById('mb-room').value.trim();
+  const active = document.getElementById('mb-status').value === 'true';
+  if(!name)  { showToast('❌ Enter guest name'); return; }
+  if(!phone || phone.length < 10) { showToast('❌ Enter valid phone number'); return; }
+  if(!room)  { showToast('❌ Enter room number'); return; }
+  const data = { name, phone, roomNumber: room, active, updatedAt: new Date() };
+  if(editingMemberId) {
+    db.collection('members').doc(editingMemberId).update(data);
+    showToast('✅ Member updated!');
+  } else {
+    data.createdAt = new Date();
+    db.collection('members').add(data);
+    showToast('✅ Member added!');
+  }
+  closeMemberModal();
+}
+
 // ── CONFIRM DELETE ──
 function confirmDelete(type,id,label) {
   pendingDeleteId=id; pendingDeleteType=type;
   document.getElementById('confirm-title').textContent=type==='order'?`Delete Order?`:`Delete "${label}"?`;
   document.getElementById('confirm-msg').textContent=type==='order'?`Order from ${label} will be deleted.`:`This menu item will be permanently deleted.`;
   document.getElementById('confirm-ok-btn').onclick=async()=>{
-    const col=pendingDeleteType==='order'?'orders':'menuItems';
+    const col=pendingDeleteType==='order'?'orders':pendingDeleteType==='member'?'members':'menuItems';
     await db.collection(col).doc(pendingDeleteId).delete();
     showToast('🗑️ Deleted');
     closeConfirm();
@@ -914,6 +1194,7 @@ function showToast(msg) {
 }
 
 document.getElementById('item-modal').addEventListener('click',function(e){if(e.target===this)closeModal();});
+document.getElementById('member-modal').addEventListener('click',function(e){if(e.target===this)closeMemberModal();});
 document.getElementById('confirm-overlay').addEventListener('click',function(e){if(e.target===this)closeConfirm();});
 
 // iOS PWA install hint
