@@ -159,20 +159,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .edit-btn{background:#EEF2FF;color:#3730a3;border:none;border-radius:8px;padding:6px 9px;font-size:12px;cursor:pointer;font-family:inherit}
 .delete-menu-btn{background:#FFEBEE;color:#C62828;border:none;border-radius:8px;padding:6px 9px;font-size:12px;cursor:pointer;font-family:inherit}
 
-.member-card{background:#fff;border-radius:14px;padding:14px;margin-bottom:10px;border:1px solid #eee;display:flex;align-items:center;gap:12px}
-.member-avatar{width:42px;height:42px;border-radius:50%;background:#E3F2FD;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#1565C0;flex-shrink:0}
-.member-info{flex:1}
-.member-name{font-size:14px;font-weight:600;color:#1a1a1a}
-.member-room{font-size:12px;color:#888;margin-top:2px}
-.member-phone{font-size:12px;color:#555;margin-top:2px}
-.member-status-badge{font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;white-space:nowrap;flex-shrink:0}
-.badge-active{background:#E8F5E9;color:#2E7D32}
-.badge-inactive{background:#FFEBEE;color:#C62828}
-.member-actions{display:flex;gap:6px;flex-shrink:0}
-.pending-section-title{font-size:11px;font-weight:700;color:#F57F17;text-transform:uppercase;letter-spacing:.5px;border-left:3px solid #F57F17;padding-left:8px;margin:12px 0 8px}
-.active-section-title{font-size:11px;font-weight:700;color:#2E7D32;text-transform:uppercase;letter-spacing:.5px;border-left:3px solid #2E7D32;padding-left:8px;margin:12px 0 8px}
-.approve-btn{background:#E8F5E9;color:#2E7D32;border:none;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit}
-.member-card.pending{border-left:3px solid #F57F17;background:#FFFDE7}
 .img-upload-area{border:2px dashed #e0e0e0;border-radius:12px;padding:16px;text-align:center;cursor:pointer;margin-top:6px;background:#fafafa;transition:all .2s}
 .img-upload-area.has-img{border-style:solid;border-color:var(--red);background:#fff}
 .img-preview{max-height:120px;border-radius:8px;object-fit:cover;margin:0 auto}
@@ -357,8 +343,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
     </select>
     <label>Regular Price (₹)</label>
     <input type="number" id="m-price" placeholder="e.g. 250" min="0">
-    <label>Room Price (₹) <span style="font-weight:400;color:#aaa;text-transform:none">— optional, for room members</span></label>
-    <input type="number" id="m-room-price" placeholder="e.g. 200 (leave blank if no room discount)" min="0">
+    <label>Room Price (₹) <span style="font-weight:400;color:#aaa;font-size:10px">optional</span></label>
+    <input type="number" id="m-room-price" placeholder="e.g. 200 (blank = no room discount)" min="0">
     <label>Emoji Icon</label>
     <input type="text" id="m-emoji" placeholder="e.g. 🧀" maxlength="2">
     <label>Description (optional)</label>
@@ -600,199 +586,12 @@ function openWA(phone, orderId) {
 }
 
 // ── PRINT ──
-// ── PRINT HELPERS ──
-const TANDOOR_ITEMS = ["malai chaap","paneer tikka","paneer malai tikka","afghani paneer tikka","tandoori naan","butter naan","garlic naan","tandoori roti","tandoori butter roti","aloo pyaz kulcha","aloo kulcha","paneer kulcha","chaap","tikka","naan","kulcha"];
-
-const CAT_HINDI = {"breakfast":"नाश्ता","starters":"स्टार्टर","sandwiches":"सैंडविच","indian":"मेन कोर्स","chinese":"चाइनीज़","breads":"ब्रेड","meals":"मील्स","beverages":"पेय"};
-const CAT_EMOJI_KOT = {"breakfast":"[सुबह]","starters":"[नाश्ता]","sandwiches":"[सैंडविच]","indian":"[मेन]","chinese":"[चाइनीज]","breads":"[ब्रेड]","meals":"[मील]","beverages":"[पेय]"};
-
-const HINDI_NAMES = {
-  "paneer tikka":"पनीर टिक्का","malai chaap":"मलाई चाप","dal makhani":"दाल मखनी",
-  "office thali":"ऑफिस थाली","veg biryani":"वेज बिरयानी","aloo paratha":"आलू पराठा",
-  "tea":"चाय","coffee":"कॉफी","chole bature":"छोले भटूरे","butter naan":"बटर नान",
-  "garlic naan":"गार्लिक नान","paneer butter masala":"पनीर बटर मसाला",
-  "veg hakka noodles":"हक्का नूडल्स","fried rice":"फ्राइड राइस",
-  "paneer burji":"पनीर भुर्जी","aloo pyaz paratha":"आलू प्याज पराठा",
-  "plain maggi":"प्लेन मैगी","veg maggi":"वेज मैगी","samosa":"समोसा",
-  "samosa + chole":"समोसा + छोले","aloo tikki":"आलू टिक्की","special thali":"स्पेशल थाली"
-};
-
-function hasTandoor(items) {
-  return (items||[]).some(i => TANDOOR_ITEMS.some(t => (i.name||'').toLowerCase().includes(t)));
-}
-
-function fmtDateTime(ts) {
-  const d = ts && ts.toDate ? ts.toDate() : new Date();
-  const date = d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
-  const time = d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true}).toUpperCase();
-  return {date, time, d};
-}
-
-function getReadyTime(ts, isTandoor) {
-  const d = ts && ts.toDate ? ts.toDate() : new Date();
-  const mins = isTandoor ? 40 : 30;
-  const ready = new Date(d.getTime() + mins * 60000);
-  return ready.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true}).toUpperCase();
-}
-
-function pad(l, r, w=32) { return l + ' '.repeat(Math.max(1, w-l.length-r.length)) + r; }
-
-function buildInvoice(o) {
-  const isRoom = o.orderType === 'room';
-  const {date, time} = fmtDateTime(o.createdAt);
-  const LINE = '================================\n';
-  const DASH = '--------------------------------\n';
-  let t = '';
-
-  t += '       URBAN ZAYKA\n';
-  t += '    Met City, Haryana\n';
-  t += '    Ph: 8860609555\n';
-  t += LINE;
-  if(isRoom) t += '      *** ROOM SERVICE ***\n';
-  t += 'ORDER: #' + (o.orderId||o.id||'—') + '\n';
-  t += 'Date : ' + date + '  ' + time + '\n';
-
-  if(isRoom) {
-    t += 'Room : ' + (o.roomNumber||'—') + '\n';
-    t += 'Guest: ' + (o.customerName||'—') + '\n';
-    t += 'Phone: ' + (o.customerPhone||'—') + '\n';
-  } else if(o.orderType==='delivery') {
-    t += 'Type : DELIVERY';
-    if(o.distance) t += ' — ' + o.distance + ' km';
-    t += '\n';
-    t += 'Name : ' + (o.customerName||'—') + '\n';
-    t += 'Ph   : ' + (o.customerPhone||'—') + '\n';
-    if(o.address) t += 'Addr : ' + o.address + '\n';
-    if(o.company) t += 'Co.  : ' + o.company + (o.empId?' ('+o.empId+')':'') + '\n';
-  } else {
-    t += 'Type : PICKUP\n';
-    t += 'Name : ' + (o.customerName||'—') + '\n';
-    t += 'Ph   : ' + (o.customerPhone||'—') + '\n';
-  }
-
-  t += LINE;
-
-  const items = o.items || [];
-
-  if(isRoom) {
-    // Room invoice — REG and ROOM price
-    t += 'ITEM            QTY  REG    ROOM\n';
-    t += LINE;
-    let regTotal = 0, roomTotal = 0;
-    items.forEach(item => {
-      const name = (item.name||'Item').substring(0,14).padEnd(14);
-      const qty = String(item.qty||1).padStart(3);
-      const reg = item.regularPrice||item.price||0;
-      const room = item.roomPrice||item.price||0;
-      regTotal += reg * (item.qty||1);
-      roomTotal += room * (item.qty||1);
-      t += name + qty + '  Rs.' + String(reg).padEnd(5) + 'Rs.' + room + '\n';
-    });
-    const saved = regTotal - roomTotal;
-    t += LINE;
-    t += ' 1. Regular Price'.padEnd(24) + 'Rs.' + regTotal + '\n';
-    t += ' 2. Room Discount'.padEnd(24) + '-Rs.' + saved + '\n';
-    t += DASH;
-    t += '    ROOM TOTAL'.padEnd(24) + 'Rs.' + roomTotal + '\n';
-  } else {
-    // Regular invoice
-    t += 'ITEM                     QTY   AMT\n';
-    t += LINE;
-    let subtotal = 0;
-    items.forEach(item => {
-      const nq = (item.name||'Item') + ' x' + (item.qty||1);
-      const amt = 'Rs.' + (item.total||((item.price||0)*(item.qty||1)));
-      subtotal += (item.total||((item.price||0)*(item.qty||1)));
-      t += (nq.length+amt.length>=31) ? nq.substring(0,32)+'\n'+pad('',amt)+'\n' : pad(nq,amt)+'\n';
-    });
-    t += DASH;
-    t += pad('Subtotal','Rs.'+subtotal) + '\n';
-    if(o.deliveryCharge>0) t += pad('Delivery','Rs.'+o.deliveryCharge) + '\n';
-    else if(o.orderType==='delivery') t += pad('Delivery','FREE') + '\n';
-    if(o.corporateDiscount>0) t += pad('Corp. Discount','-Rs.'+o.corporateDiscount) + '\n';
-    t += LINE;
-    t += pad('TOTAL','Rs.'+(o.total||subtotal)) + '\n';
-  }
-
-  t += LINE;
-  t += '  Thank you — Urban Zayka\n';
-  t += '     urbanzayka.in\n';
-  t += '\n\n\n';
-  t += '\x1D\x56\x00'; // CUT
-  return t;
-}
-
-function buildKOT(o) {
-  const isRoom = o.orderType === 'room';
-  const isTandoor = hasTandoor(o.items);
-  const tat = isTandoor ? 40 : 30;
-  const {date, time} = fmtDateTime(o.createdAt);
-  const readyTime = getReadyTime(o.createdAt, isTandoor);
-  const LINE = '================================\n';
-  const DASH = '--------------------------------\n';
-  const items = o.items || [];
-  let t = '';
-
-  t += '  !! KITCHEN ORDER TICKET !!\n';
-  t += '  !! किचन आर्डर टिकट !!\n';
-  t += LINE;
-  t += '#' + (o.orderId||o.id||'—') + '    ' + time + '\n';
-
-  if(isRoom) {
-    t += '** रूम सर्विस / ROOM SERVICE **\n';
-    t += '   Room ' + (o.roomNumber||'—') + ' | ' + (o.customerName||'Guest') + '\n';
-  } else if(o.orderType==='delivery') {
-    t += '** डिलीवरी / DELIVERY **\n';
-    t += '   ' + (o.customerName||'—') + '\n';
-  } else {
-    t += '** पिकअप / PICKUP **\n';
-    t += '   ' + (o.customerName||'—') + '\n';
-  }
-
-  t += DASH;
-  t += '>> तैयार करें / READY BY: ' + readyTime + '\n';
-  t += '   (' + tat + ' मिनट / mins)' + (isTandoor ? '  !! TANDOOR !!' : '') + '\n';
-  t += LINE;
-
-  // Group by category
-  const groups = {};
-  items.forEach(item => {
-    const cat = (item.category||item.cat||'other').toLowerCase();
-    if(!groups[cat]) groups[cat] = [];
-    groups[cat].push(item);
-  });
-
-  Object.entries(groups).forEach(([cat, catItems]) => {
-    const emoji = CAT_EMOJI_KOT[cat] || '[आइटम]';
-    const hindi = CAT_HINDI[cat] || cat;
-    t += '\n' + emoji + ' ' + hindi + ' / ' + cat.toUpperCase() + '\n';
-    t += DASH;
-    catItems.forEach(item => {
-      const isTandoorItem = TANDOOR_ITEMS.some(td => (item.name||'').toLowerCase().includes(td));
-      const hindiName = HINDI_NAMES[(item.name||'').toLowerCase()] || item.name;
-      t += ' [' + (item.qty||1) + '] ' + (item.name||'Item') + (isTandoorItem?' !! TANDOOR':'') + '\n';
-      t += '       ' + hindiName + '\n';
-    });
-  });
-
-  t += '\n' + LINE;
-  const totalQty = items.reduce((s,i)=>s+(i.qty||1),0);
-  t += 'कुल / TOTAL ITEMS: ' + totalQty + '\n';
-  t += 'तैयार समय / READY: ' + readyTime + '\n';
-  if(isTandoor) t += '!! तंदूर आर्डर है / TANDOOR ORDER !!\n';
-  t += LINE;
-  t += '\n\n\n';
-  t += '\x1D\x56\x00'; // CUT
-  return t;
-}
-
 function printOrder(id) {
   const o = allOrders.find(x => x.id===id);
   if (!o) return;
-  showToast('🖨️ Printing Invoice + KOT...');
-  const invoice = buildInvoice(o);
-  const kot = buildKOT(o);
-  const combined = invoice + kot;
+  showToast('🖨️ Printing 2 copies...');
+  const invoice  = buildInvoice(o);
+  const combined = invoice + invoice; // 2 copies, no KOT
   function toB64(str) {
     const bytes = new TextEncoder().encode(str);
     let bin = ''; bytes.forEach(b => bin += String.fromCharCode(b));
@@ -803,7 +602,7 @@ function printOrder(id) {
     headers: { 'Authorization': 'Basic '+btoa(PRINTNODE_API_KEY+':'), 'Content-Type': 'application/json' },
     body: JSON.stringify({ printerId: PRINTNODE_PRINTER_ID, title: 'Order #'+(o.orderId||o.id.slice(-6)), contentType: 'raw_base64', content: toB64(combined), source: 'Urban Zayka Admin' })
   }).then(r => {
-    if(r.ok) r.json().then(j => showToast('✅ Invoice + KOT printing! Job #'+j));
+    if(r.ok) r.json().then(j => showToast('✅ 2 copies printing! Job #'+j));
     else r.text().then(e => showToast('❌ Print failed'));
   }).catch(() => showToast('❌ Cannot reach PrintNode'));
 }
@@ -1010,7 +809,7 @@ function renderMenuAdmin() {
         <div class="menu-item-left">
           <div class="menu-item-name ${item.soldOut?'crossed':''}">${item.name}</div>
           <div class="menu-item-cat">${item.category || item.cat || ''}</div>
-          <div class="menu-item-price">₹${item.price}${item.roomPrice&&item.roomPrice<item.price?' <span style="font-size:10px;color:#2E7D32;font-weight:600">Room ₹'+item.roomPrice+'</span>':''}</div>
+          <div class="menu-item-price">₹${item.price}</div>
         </div>
         <div class="menu-item-controls">
           <button class="soldout-toggle ${item.soldOut?'soldout':''}" onclick="toggleSoldOut('${item.id}',${!item.soldOut})">${item.soldOut?'Sold Out':'Available'}</button>
@@ -1059,7 +858,6 @@ function openEditModal(id) {
   document.getElementById('m-name').value   = item.name || '';
   document.getElementById('m-cat').value    = catNorm;
   document.getElementById('m-price').value = item.price || '';
-  document.getElementById('m-room-price').value = item.roomPrice || '';
   document.getElementById('m-emoji').value = item.emoji || '🍽️';
   document.getElementById('m-desc').value  = item.description || item.desc || item.sub || '';
   resetImageUI(item.imageUrl || null);
@@ -1086,9 +884,7 @@ async function saveItem() {
   }
   const catMap = {'breakfast':'breakfast','starters':'starters','sandwiches':'sandwiches','indian':'indian','chinese':'chinese','breads':'breads','meals':'meals','beverages':'beverages'};
   const catLower = catMap[cat.toLowerCase()] || cat.toLowerCase();
-  const roomPriceRaw = parseInt(document.getElementById('m-room-price').value)||0;
-  const roomPrice = (roomPriceRaw>0 && roomPriceRaw<price) ? roomPriceRaw : 0;
-  const data = { name, category:catLower, cat:catLower, price, roomPrice, emoji, description:desc, desc:desc, sub:desc, imageUrl, soldOut:false, available:true, updatedAt:new Date() };
+  const data = { name, category:catLower, cat:catLower, price, emoji, description:desc, desc:desc, sub:desc, imageUrl, soldOut:false, available:true, updatedAt:new Date() };
   if(editingId) {
     db.collection('menuItems').doc(editingId).update(data);
     showToast(`✅ ${name} updated!`);
@@ -1099,114 +895,6 @@ async function saveItem() {
   }
   if(btn) { btn.disabled = false; btn.textContent = 'Save Item'; }
   closeModal();
-}
-
-// ── MEMBERS ──
-let allMembers = [], editingMemberId = null;
-
-function initMembers() {
-  db.collection('members').onSnapshot(snap => {
-    allMembers = snap.docs.map(d => ({id:d.id,...d.data()}));
-    renderMembers();
-  });
-}
-
-function renderMembers() {
-  const pending = allMembers.filter(m => m.active === false || m.active === 'false');
-  const active  = allMembers.filter(m => m.active === true  || m.active === 'true');
-
-  // Update pending badge on nav
-  const pb = document.getElementById('pending-badge');
-  if(pb) { pb.textContent=pending.length; pb.style.display=pending.length>0?'flex':'none'; }
-
-  document.getElementById('member-count').textContent = allMembers.length;
-  const el = document.getElementById('members-list');
-
-  if(!allMembers.length) {
-    el.innerHTML = '<div class="empty-state"><div class="empty-icon">🏠</div><p>No members yet.</p></div>';
-    return;
-  }
-
-  const memberCard = (m, isPending) => {
-    const initials = m.name ? m.name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2) : '?';
-    return `<div class="member-card ${isPending?'pending':''}">
-      <div class="member-avatar" style="${isPending?'background:#FFF8E1;color:#F57F17':''}">${initials}</div>
-      <div class="member-info">
-        <div class="member-name">${m.name||'Guest'}</div>
-        <div class="member-room">🏠 Room ${m.roomNumber||'—'}</div>
-        <div class="member-phone">📞 ${m.phone||'—'}</div>
-      </div>
-      ${isPending
-        ? `<button class="approve-btn" onclick="approveMember('${m.id}','${m.name||'Guest'}')">✅ Approve</button>`
-        : `<span class="member-status-badge badge-active">✅ Active</span>`
-      }
-      <div class="member-actions">
-        ${!isPending?`<button class="edit-btn" onclick="openEditMemberModal('${m.id}')">✏️</button>`:''}
-        <button class="delete-menu-btn" onclick="confirmDelete('member','${m.id}','${m.name||'Member'}')">🗑️</button>
-      </div>
-    </div>`;
-  };
-
-  let html = '';
-  if(pending.length) {
-    html += `<div class="pending-section-title">⏳ Pending Approval (${pending.length})</div>`;
-    html += pending.map(m => memberCard(m, true)).join('');
-  }
-  if(active.length) {
-    html += `<div class="active-section-title">✅ Active Members (${active.length})</div>`;
-    html += active.map(m => memberCard(m, false)).join('');
-  }
-  el.innerHTML = html;
-}
-
-function openAddMemberModal() {
-  editingMemberId = null;
-  document.getElementById('member-modal-title').textContent = '➕ Add Room Member';
-  document.getElementById('mb-name').value = '';
-  document.getElementById('mb-phone').value = '';
-  document.getElementById('mb-room').value = '';
-  document.getElementById('mb-status').value = 'true';
-  document.getElementById('member-modal').classList.add('show');
-  setTimeout(()=>document.getElementById('mb-name').focus(),300);
-}
-
-function openEditMemberModal(id) {
-  const m = allMembers.find(x => x.id===id);
-  if(!m) return;
-  editingMemberId = id;
-  document.getElementById('member-modal-title').textContent = '✏️ Edit Room Member';
-  document.getElementById('mb-name').value = m.name||'';
-  document.getElementById('mb-phone').value = m.phone||'';
-  document.getElementById('mb-room').value = m.roomNumber||'';
-  document.getElementById('mb-status').value = (m.active===true||m.active==='true')?'true':'false';
-  document.getElementById('member-modal').classList.add('show');
-}
-
-function closeMemberModal() { document.getElementById('member-modal').classList.remove('show'); }
-
-function approveMember(id, name) {
-  db.collection('members').doc(id).update({ active: true, approvedAt: new Date() });
-  showToast('✅ ' + name + ' approved!');
-}
-
-function saveMember() {
-  const name  = document.getElementById('mb-name').value.trim();
-  const phone = document.getElementById('mb-phone').value.trim();
-  const room  = document.getElementById('mb-room').value.trim();
-  const active = document.getElementById('mb-status').value === 'true';
-  if(!name)  { showToast('❌ Enter guest name'); return; }
-  if(!phone || phone.length < 10) { showToast('❌ Enter valid phone number'); return; }
-  if(!room)  { showToast('❌ Enter room number'); return; }
-  const data = { name, phone, roomNumber: room, active, updatedAt: new Date() };
-  if(editingMemberId) {
-    db.collection('members').doc(editingMemberId).update(data);
-    showToast('✅ Member updated!');
-  } else {
-    data.createdAt = new Date();
-    db.collection('members').add(data);
-    showToast('✅ Member added!');
-  }
-  closeMemberModal();
 }
 
 // ── CONFIRM DELETE ──
@@ -1234,6 +922,238 @@ function showToast(msg) {
 document.getElementById('item-modal').addEventListener('click',function(e){if(e.target===this)closeModal();});
 document.getElementById('member-modal').addEventListener('click',function(e){if(e.target===this)closeMemberModal();});
 document.getElementById('confirm-overlay').addEventListener('click',function(e){if(e.target===this)closeConfirm();});
+
+// ── MEMBER CSS (injected) ──
+const memberStyle = document.createElement('style');
+memberStyle.textContent = `.member-card{background:#fff;border-radius:14px;padding:14px;margin-bottom:10px;border:1px solid #eee;display:flex;align-items:center;gap:12px}.member-card.pending{border-left:3px solid #F57F17;background:#FFFDE7}.member-avatar{width:42px;height:42px;border-radius:50%;background:#E3F2FD;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#1565C0;flex-shrink:0}.member-info{flex:1}.member-name{font-size:14px;font-weight:600;color:#1a1a1a}.member-room{font-size:12px;color:#888;margin-top:2px}.member-phone{font-size:12px;color:#555;margin-top:2px}.member-status-badge{font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;white-space:nowrap;flex-shrink:0}.badge-active{background:#E8F5E9;color:#2E7D32}.badge-inactive{background:#FFEBEE;color:#C62828}.member-actions{display:flex;gap:6px;flex-shrink:0}.pending-section-title{font-size:11px;font-weight:700;color:#F57F17;text-transform:uppercase;letter-spacing:.5px;border-left:3px solid #F57F17;padding-left:8px;margin:12px 0 8px}.active-section-title{font-size:11px;font-weight:700;color:#2E7D32;text-transform:uppercase;letter-spacing:.5px;border-left:3px solid #2E7D32;padding-left:8px;margin:12px 0 8px}.approve-btn{background:#E8F5E9;color:#2E7D32;border:none;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit}`;
+document.head.appendChild(memberStyle);
+
+// ── ROOM PRICE FIELD in modal ──
+// Added via CSS/HTML — see modal HTML above
+
+// ── PRINT HELPERS (ASCII ONLY — no Hindi) ──
+const TANDOOR_ITEMS = ["malai chaap","paneer tikka","paneer malai tikka","afghani paneer tikka","tandoori naan","butter naan","garlic naan","tandoori roti","tandoori butter roti","aloo pyaz kulcha","aloo kulcha","paneer kulcha","chaap","tikka","naan","kulcha"];
+const CAT_LABEL_PRINT = {"breakfast":"[NASHTA/BREAKFAST]","starters":"[STARTER]","sandwiches":"[SANDWICH]","indian":"[MAIN COURSE]","chinese":"[CHINESE]","breads":"[ROTI-NAAN]","meals":"[THALI-MEAL]","beverages":"[DRINK]"};
+const ITEM_DISPLAY = {"paneer tikka":"PANEER TIKKA","malai chaap":"MALAI CHAAP","dal makhani":"DAL MAKHANI","office thali":"OFFICE THALI","veg biryani":"VEG BIRYANI","aloo paratha":"ALOO PARATHA","tea":"CHAI/TEA","coffee":"COFFEE","butter naan":"BUTTER NAAN","garlic naan":"GARLIC NAAN","chole bature":"CHOLE BATURE","paneer butter masala":"PNR BUTTER MASALA","special thali":"SPECIAL THALI"};
+
+function hasTandoor(items) {
+  return (items||[]).some(i => TANDOOR_ITEMS.some(t => (i.name||'').toLowerCase().includes(t)));
+}
+function fmtDateTime(ts) {
+  const d = ts && ts.toDate ? ts.toDate() : new Date();
+  return { date: d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}), time: d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true}).toUpperCase(), d };
+}
+function getReadyTime(ts, isTandoor) {
+  const d = ts && ts.toDate ? ts.toDate() : new Date();
+  return new Date(d.getTime()+(isTandoor?40:30)*60000).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true}).toUpperCase();
+}
+function pad(l,r,w=32){return l+' '.repeat(Math.max(1,w-l.length-r.length))+r;}
+
+function buildInvoice(o) {
+  const isRoom = o.orderType==='room';
+  const {date,time} = fmtDateTime(o.createdAt);
+  const LINE='================================\n', DASH='--------------------------------\n';
+  let t='';
+  t+='       URBAN ZAYKA\n';
+  t+='    Met City, Haryana\n';
+  t+='    Ph: 8860609555\n';
+  t+=LINE;
+  if(isRoom) t+='      *** ROOM SERVICE ***\n';
+  t+='ORDER: #'+(o.orderId||o.id||'--')+'\n';
+  t+='Date : '+date+'  '+time+'\n';
+  if(isRoom){
+    t+='Room : '+(o.roomNumber||'--')+'\n';
+    t+='Guest: '+(o.customerName||'--')+'\n';
+    t+='Phone: '+(o.customerPhone||'--')+'\n';
+  } else if(o.orderType==='delivery'){
+    t+='Type : DELIVERY'+(o.distance?' -- '+o.distance+' km':'')+'\n';
+    t+='Name : '+(o.customerName||'--')+'\n';
+    t+='Ph   : '+(o.customerPhone||'--')+'\n';
+    if(o.address) t+='Addr : '+o.address+'\n';
+    if(o.company) t+='Co.  : '+o.company+(o.empId?' ('+o.empId+')':'')+'\n';
+  } else {
+    t+='Type : PICKUP\n';
+    t+='Name : '+(o.customerName||'--')+'\n';
+    t+='Ph   : '+(o.customerPhone||'--')+'\n';
+  }
+  t+=LINE;
+  const items=o.items||[];
+  if(isRoom){
+    t+='ITEM            QTY  REG    ROOM\n'+LINE;
+    let regT=0,roomT=0;
+    items.forEach(item=>{
+      const nm=(item.name||'Item').substring(0,14).padEnd(14);
+      const qty=String(item.qty||1).padStart(3);
+      const reg=item.regularPrice||item.price||0;
+      const room=item.roomPrice||item.price||0;
+      regT+=reg*(item.qty||1); roomT+=room*(item.qty||1);
+      t+=nm+qty+'  Rs.'+String(reg).padEnd(5)+'Rs.'+room+'\n';
+    });
+    const saved=regT-roomT;
+    t+=LINE;
+    t+=pad('Regular Price','Rs.'+regT)+'\n';
+    t+=pad('Room Discount','-Rs.'+saved)+'\n';
+    t+=DASH+pad('ROOM TOTAL','Rs.'+roomT)+'\n';
+  } else {
+    t+='ITEM                     QTY   AMT\n'+LINE;
+    let sub=0;
+    items.forEach(item=>{
+      const nq=(item.name||'Item')+' x'+(item.qty||1);
+      const amt='Rs.'+(item.total||((item.price||0)*(item.qty||1)));
+      sub+=(item.total||((item.price||0)*(item.qty||1)));
+      t+=(nq.length+amt.length>=31)?nq.substring(0,32)+'\n'+pad('',amt)+'\n':pad(nq,amt)+'\n';
+    });
+    t+=DASH+pad('Subtotal','Rs.'+sub)+'\n';
+    if(o.deliveryCharge>0) t+=pad('Delivery','Rs.'+o.deliveryCharge)+'\n';
+    else if(o.orderType==='delivery') t+=pad('Delivery','FREE')+'\n';
+    if(o.corporateDiscount>0) t+=pad('Corp. Discount','-Rs.'+o.corporateDiscount)+'\n';
+    t+=LINE+pad('TOTAL','Rs.'+(o.total||sub))+'\n';
+  }
+  t+=LINE+'  Thank you -- Urban Zayka\n     urbanzayka.in\n\n\n\n';
+  t+='\x1D\x56\x00';
+  return t;
+}
+
+function buildKOT(o) {
+  const isRoom=o.orderType==='room';
+  const isTandoor=hasTandoor(o.items);
+  const tat=isTandoor?40:30;
+  const {date,time}=fmtDateTime(o.createdAt);
+  const readyTime=getReadyTime(o.createdAt,isTandoor);
+  const LINE='================================\n',DASH='--------------------------------\n';
+  const items=o.items||[];
+  let t='';
+  t+='  !! KITCHEN ORDER TICKET !!\n'+LINE;
+  t+='#'+(o.orderId||o.id||'--')+'    '+time+'\n';
+  t+='Date: '+date+'\n';
+  if(isRoom){
+    t+='** ROOM SERVICE **\n';
+    t+='   Room '+(o.roomNumber||'--')+' | '+(o.customerName||'Guest')+'\n';
+  } else if(o.orderType==='delivery'){
+    t+='** DELIVERY **\n';
+    t+='   '+(o.customerName||'--')+'\n';
+    if(o.address) t+='   '+o.address.substring(0,32)+'\n';
+  } else {
+    t+='** PICKUP **\n';
+    t+='   '+(o.customerName||'--')+'\n';
+  }
+  t+=DASH;
+  t+='>> READY BY: '+readyTime+' ('+tat+' MIN)'+(isTandoor?' !! TANDOOR !!':'')+'\n';
+  t+=LINE;
+  const groups={};
+  items.forEach(item=>{
+    const cat=(item.category||item.cat||'other').toLowerCase();
+    if(!groups[cat]) groups[cat]=[];
+    groups[cat].push(item);
+  });
+  Object.entries(groups).forEach(([cat,catItems])=>{
+    const label=CAT_LABEL_PRINT[cat]||'['+cat.toUpperCase()+']';
+    t+='\n'+label+'\n'+DASH;
+    catItems.forEach(item=>{
+      const isTandoorItem=TANDOOR_ITEMS.some(td=>(item.name||'').toLowerCase().includes(td));
+      const display=ITEM_DISPLAY[(item.name||'').toLowerCase()]||(item.name||'Item').toUpperCase();
+      t+=' ['+( item.qty||1)+'x] '+display+(isTandoorItem?' !!TANDOOR!!':'')+'\n';
+    });
+  });
+  const totalQty=items.reduce((s,i)=>s+(i.qty||1),0);
+  t+='\n'+LINE;
+  t+='TOTAL ITEMS: '+totalQty+'\n';
+  t+='READY: '+readyTime+'\n';
+  if(isTandoor) t+='!! TANDOOR ORDER !!\n';
+  t+=LINE+'\n\n\n';
+  t+='\x1D\x56\x00';
+  return t;
+}
+
+function printOrder(id) {
+  const o=allOrders.find(x=>x.id===id);
+  if(!o) return;
+  showToast('\uD83D\uDDA8\uFE0F Printing Invoice + KOT...');
+  const combined=buildInvoice(o)+buildKOT(o);
+  function toB64(str){
+    const bytes=new TextEncoder().encode(str);
+    let bin=''; bytes.forEach(b=>bin+=String.fromCharCode(b));
+    return btoa(bin);
+  }
+  fetch('https://api.printnode.com/printjobs',{
+    method:'POST',
+    headers:{'Authorization':'Basic '+btoa(PRINTNODE_API_KEY+':'),'Content-Type':'application/json'},
+    body:JSON.stringify({printerId:PRINTNODE_PRINTER_ID,title:'Order #'+(o.orderId||o.id.slice(-6)),contentType:'raw_base64',content:toB64(combined),source:'Urban Zayka Admin'})
+  }).then(r=>{
+    if(r.ok) r.json().then(j=>showToast('Invoice + KOT printing! Job #'+j));
+    else r.text().then(()=>showToast('Print failed -- is printer on?'));
+  }).catch(()=>showToast('Cannot reach PrintNode'));
+}
+
+// ── MEMBERS ──
+let allMembers=[],editingMemberId=null;
+function initMembers(){
+  db.collection('members').onSnapshot(snap=>{
+    allMembers=snap.docs.map(d=>({id:d.id,...d.data()}));
+    renderMembers();
+  });
+}
+function renderMembers(){
+  const pending=allMembers.filter(m=>m.active===false||m.active==='false');
+  const active=allMembers.filter(m=>m.active===true||m.active==='true');
+  const pb=document.getElementById('pending-badge');
+  if(pb){pb.textContent=pending.length;pb.style.display=pending.length>0?'flex':'none';}
+  document.getElementById('member-count').textContent=allMembers.length;
+  const el=document.getElementById('members-list');
+  if(!allMembers.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">🏠</div><p>No members yet.</p></div>';return;}
+  const card=(m,isPending)=>{
+    const initials=m.name?m.name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2):'?';
+    return `<div class="member-card ${isPending?'pending':''}">
+      <div class="member-avatar" style="${isPending?'background:#FFF8E1;color:#F57F17':''}">${initials}</div>
+      <div class="member-info">
+        <div class="member-name">${m.name||'Guest'}</div>
+        <div class="member-room">🏠 Room ${m.roomNumber||'--'}</div>
+        <div class="member-phone">📞 ${m.phone||'--'}</div>
+      </div>
+      ${isPending?`<button class="approve-btn" onclick="approveMember('${m.id}','${m.name||'Guest'}')">✅ Approve</button>`:`<span class="member-status-badge badge-active">✅ Active</span>`}
+      <div class="member-actions">
+        ${!isPending?`<button class="edit-btn" onclick="openEditMemberModal('${m.id}')">✏️</button>`:''}
+        <button class="delete-menu-btn" onclick="confirmDelete('member','${m.id}','${m.name||'Member'}')">🗑️</button>
+      </div>
+    </div>`;
+  };
+  let html='';
+  if(pending.length) html+=`<div class="pending-section-title">⏳ Pending Approval (${pending.length})</div>`+pending.map(m=>card(m,true)).join('');
+  if(active.length) html+=`<div class="active-section-title">✅ Active Members (${active.length})</div>`+active.map(m=>card(m,false)).join('');
+  el.innerHTML=html;
+}
+function approveMember(id,name){db.collection('members').doc(id).update({active:true,approvedAt:new Date()});showToast('✅ '+name+' approved!');}
+function openAddMemberModal(){
+  editingMemberId=null;
+  document.getElementById('member-modal-title').textContent='➕ Add Room Member';
+  document.getElementById('mb-name').value='';document.getElementById('mb-phone').value='';
+  document.getElementById('mb-room').value='';document.getElementById('mb-status').value='true';
+  document.getElementById('member-modal').classList.add('show');
+  setTimeout(()=>document.getElementById('mb-name').focus(),300);
+}
+function openEditMemberModal(id){
+  const m=allMembers.find(x=>x.id===id);if(!m)return;
+  editingMemberId=id;
+  document.getElementById('member-modal-title').textContent='✏️ Edit Room Member';
+  document.getElementById('mb-name').value=m.name||'';document.getElementById('mb-phone').value=m.phone||'';
+  document.getElementById('mb-room').value=m.roomNumber||'';
+  document.getElementById('mb-status').value=(m.active===true||m.active==='true')?'true':'false';
+  document.getElementById('member-modal').classList.add('show');
+}
+function closeMemberModal(){document.getElementById('member-modal').classList.remove('show');}
+function saveMember(){
+  const name=document.getElementById('mb-name').value.trim();
+  const phone=document.getElementById('mb-phone').value.trim();
+  const room=document.getElementById('mb-room').value.trim();
+  const active=document.getElementById('mb-status').value==='true';
+  if(!name){showToast('❌ Enter guest name');return;}
+  if(!phone||phone.length<10){showToast('❌ Enter valid phone');return;}
+  if(!room){showToast('❌ Enter room number');return;}
+  const data={name,phone,roomNumber:room,active,updatedAt:new Date()};
+  if(editingMemberId){db.collection('members').doc(editingMemberId).update(data);showToast('✅ Member updated!');}
+  else{data.createdAt=new Date();db.collection('members').add(data);showToast('✅ Member added!');}
+  closeMemberModal();
+}
 
 // iOS PWA install hint
 const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
